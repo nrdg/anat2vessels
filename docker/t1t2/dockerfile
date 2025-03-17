@@ -1,0 +1,17 @@
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+
+RUN apt-get update && apt-get install -y wget
+
+RUN pip install nnunetv2
+
+RUN mkdir -p /data/nnUNet_raw \
+    && mkdir -p /data/nnUNet_preprocessed \
+    && mkdir -p /data/nnUNet_results
+
+ENV nnUNet_raw="/data/nnUNet_raw"\
+    nnUNet_preprocessed="/data/nnUNet_preprocessed"\
+    nnUNet_results="/data/nnUNet_results"
+
+RUN wget https://huggingface.co/huggingbrain/AnatomicalVesselSeg/resolve/main/t1t2_model.zip
+
+RUN nnUNetv2_install_pretrained_model_from_zip t1t2_model.zip

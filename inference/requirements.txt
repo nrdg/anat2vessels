@@ -1,0 +1,7 @@
+numpy
+nibabel
+scipy
+scikit-image
+tqdm
+pandas
+antspyx
