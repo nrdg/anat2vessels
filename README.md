@@ -80,6 +80,5 @@ To do simply run the following command:
 python csv_from_predictions.py --input_dir /path/to/predictions --output_path path/to/save/features.csv
 ```
 
-The csv_from_predictions.py script will extract the features from the predictions and save them to a csv file,
 If ray is installed it will run in parallel using all available cores,
 to disable this use the --no_ray flag.
