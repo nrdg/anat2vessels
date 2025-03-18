@@ -30,7 +30,7 @@ pip install 'tensorflow[and-cuda]'
 If running inference on a large dataset, optionally install ray,
 and the script with run in parallel using all available cores.
 To disable this use the --no_ray flag.
-## Setting up nnUNet
+## Step 2: Setting up nnUNet
 
 To run inference on the Anat2Vessel model, you can either install
 nnUNet locally, or use the docker containers provided.
@@ -68,7 +68,10 @@ docker run -it --gpus=1 -v /path/to/data:/data asaagilmore/anatomical_vessel_seg
 Note that this requires the NVIDIA container toolkit to be installed on your machine
 for GPU support.
 
-## Feature extraction
+## Step 3: Feature extraction
+
+We provide the script used in our paper to extract anatomical features from the model predictions.
+This script will extract the features from the model predictions and save them to a .csv file.
 
 Feature extraction can be easily performed using the csv_from_predictions.py script.
 
