@@ -46,7 +46,7 @@ if __name__ == '__main__':
     args.add_argument("--skull_strip", type=bool, default=False)
     args.add_argument("--id_delim", type=str, default='_')
     args.add_argument("--no_ray", type=bool, default=False)
-    args.add_argument("--num_workers", type=int, default=18)
+    args.add_argument("--num_workers", type=int, default=-1)
 
     args = args.parse_args()
 
@@ -101,7 +101,11 @@ if __name__ == '__main__':
 
 
     if ray is not None and not args.no_ray:
-        ray.init(num_cpus=args.num_workers)
+        if args.num_workers == -1:
+            num_cpus = os.cpu_count()
+        else:
+            num_cpus = args.num_workers
+        ray.init(num_cpus=num_cpus)
         remote_func = ray.remote(process_files)
         print("Using Ray for parallel processing")
         ray.get([remote_func.remote(t1_file, ref_img_pth) for t1_file in t1_files])
