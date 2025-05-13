@@ -78,26 +78,30 @@ if __name__ == '__main__':
               "the subject ID or adjust the id_delim argument.")
 
     def process_files(t1_file, ref_img_pth):
-        if args.id_delim not in t1_file:
-            subid = t1_file
-        else:
-            subid = t1_file.split(args.id_delim)[0]
+        try:
+            if args.id_delim not in t1_file:
+                subid = t1_file
+            else:
+                subid = t1_file.split(args.id_delim)[0]
 
-        if args.t2_dir is not None:
-            t2_file = [f for f in t2_files if subid in f]
-            if len(t2_file) != 1:
-                print(f"Expected 1 T2 file for {subid}, found "
-                      f"{len(t2_file)}, skipping")
-                return
-            t2_file = t2_file[0]
+            if args.t2_dir is not None:
+                t2_file = [f for f in t2_files if subid in f]
+                if len(t2_file) != 1:
+                    print(f"Expected 1 T2 file for {subid}, found "
+                          f"{len(t2_file)}, skipping")
+                    return
+                t2_file = t2_file[0]
 
-            t2_pth = os.path.join(args.t2_dir, t2_file)
-            t2_file_name = f'{subid}_0001.nii.gz'
-            process_img(t2_pth, args.output_dir, t2_file_name, ref_img_pth, skull_strip=args.skull_strip)
+                t2_pth = os.path.join(args.t2_dir, t2_file)
+                t2_file_name = f'{subid}_0001.nii.gz'
+                process_img(t2_pth, args.output_dir, t2_file_name, ref_img_pth, skull_strip=args.skull_strip)
 
-        t1_pth = os.path.join(args.t1_dir, t1_file)
-        t1_file_name = f'{subid}_0000.nii.gz'
-        process_img(t1_pth, args.output_dir, t1_file_name, ref_img_pth, skull_strip=args.skull_strip)
+            t1_pth = os.path.join(args.t1_dir, t1_file)
+            t1_file_name = f'{subid}_0000.nii.gz'
+            process_img(t1_pth, args.output_dir, t1_file_name, ref_img_pth, skull_strip=args.skull_strip)
+        except Exception as e:
+            print(f"Error processing subject {subid}: {str(e)}")
+            return
 
 
     if ray is not None and not args.no_ray:
@@ -108,8 +112,12 @@ if __name__ == '__main__':
         ray.init(num_cpus=num_cpus)
         remote_func = ray.remote(process_files)
         print("Using Ray for parallel processing")
-        ray.get([remote_func.remote(t1_file, ref_img_pth) for t1_file in t1_files])
+        results = ray.get([remote_func.remote(t1_file, ref_img_pth) for t1_file in t1_files])
         ray.shutdown()
     else:
         for t1_file in tqdm(t1_files):
-            process_files(t1_file, ref_img_pth)
+            try:
+                process_files(t1_file, ref_img_pth)
+            except Exception as e:
+                print(f"Error processing file {t1_file}: {str(e)}")
+                continue
