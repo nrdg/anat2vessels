@@ -1,6 +1,7 @@
 # Anat2Vessel Instructions
 
-
+See our preprint [here](https://www.biorxiv.org/content/10.1101/2025.05.06.652518v1)
+for further details on training, validation and performance of our model.
 
 ## Step 1: Data Preprocessing
 
@@ -82,3 +83,22 @@ python csv_from_predictions.py --input_dir /path/to/predictions --output_path pa
 
 If ray is installed it will run in parallel using all available cores,
 to disable this use the --no_ray flag.
+
+
+## Citation
+
+If you used this tool to assist with work related to a publication please
+cite the following reference:
+```
+@article {Gilmore2025.05.06.652518,
+	author = {Gilmore, Asa and Eshun, Anita Esi and Wu, Yue and Lee, Aaron Y and Rokem, Ariel},
+	title = {Vessels hiding in plain sight: quantifying brain vascular morphology in anatomical MR images using deep learning},
+	elocation-id = {2025.05.06.652518},
+	year = {2025},
+	doi = {10.1101/2025.05.06.652518},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2025/05/11/2025.05.06.652518},
+	eprint = {https://www.biorxiv.org/content/early/2025/05/11/2025.05.06.652518.full.pdf},
+	journal = {bioRxiv}
+}
+```
