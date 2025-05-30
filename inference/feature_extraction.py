@@ -139,12 +139,6 @@ def _calc_shortest_path_from_points(points):
     length = np.linalg.norm(diff)
     return length
 
-def _extract_radius(segmentation, centerlines, voxel_spacing):
-    image = segmentation
-    skeleton = centerlines
-    transf = ndi.distance_transform_edt(image, return_indices=False, sampling=voxel_spacing)
-    radius_matrix = transf*skeleton
-    return radius_matrix
 
 def extract_features(nifti_path):
     out = {}

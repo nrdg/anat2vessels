@@ -89,14 +89,14 @@ def out_list_to_df(out_list):
                 out['max_radius'] = 0.0
                 out['min_radius'] = 0.0
 
-        #tortiousitys
-        tortiousities = np.array([branch['tortuosity'] for branch in item['branch_list']])
-        out['mean_tortuosity'] = float(np.mean(tortiousities))
-        out['max_tortuosity'] = float(np.max(tortiousities))
-        out['min_tortuosity'] = float(np.min(tortiousities))
-        out['tortuosity_list'] = tortiousities.tolist()
+            # Calculate tortuosities
+            tortiousities = np.array([branch['tortuosity'] for branch in item['branch_list']])
+            out['mean_tortuosity'] = float(np.mean(tortiousities))
+            out['max_tortuosity'] = float(np.max(tortiousities))
+            out['min_tortuosity'] = float(np.min(tortiousities))
+            out['tortuosity_list'] = tortiousities.tolist()
 
-            #branch lengths
+            # Calculate branch lengths
             branch_lengths = [float(branch['full_path']) for branch in item['branch_list']]
             out['branch_list'] = [{'full_path': float(branch['full_path']),
                                    'straight_path': float(branch['straight_path']),
