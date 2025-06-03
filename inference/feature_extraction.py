@@ -48,7 +48,6 @@ def _extract_radius(segmentation, centerlines, voxel_spacing):
     skeleton = centerlines
     transf = ndi.distance_transform_edt(image, return_indices=False, sampling=voxel_spacing)
     radius_matrix = transf*skeleton
-    radius_matrix = radius_matrix[skeleton > 0]
     return radius_matrix
 
 def _extract_skeleton(segmentation):
@@ -147,44 +146,25 @@ def extract_features(nifti_path):
 
     bifurcations, endpoints = _get_bifurcation_endpoint_arrays(skeleton)
 
-    # out['bifurcations'], out['endpoints'] = float(bifurcations.sum()), endpoints.sum()
-    #
-    # out['total_volume'] = float(segmentation.sum() * np.prod(voxel_spacing))
-    ##
     radius_matrix = _extract_radius(segmentation, skeleton, voxel_spacing)
     radius_list = radius_matrix[np.nonzero(radius_matrix)].tolist()
-    # out['radius_list'] = radius.tolist()
-    # out['mean_radius'] = float(radius.sum() / skeleton.sum())
-    # out['max_radius'] = float(radius.max())
-    # out['min_radius'] = float(radius.min())
 
     labeled_branches, branch_labels = _get_labeled_branches(skeleton)
 
-    # out['num_branches'] = len(branch_labels)
-
     branches = _calc_tortuosities_also_lengths(labeled_branches, branch_labels, voxel_spacing)
-
-    # tortiousities = [branch['tortuosity'] for branch in branches]
-    # out['mean_tortuosity'] = np.mean(tortiousities)
-    # out['max_tortuosity'] = np.max(tortiousities)
-    # out['min_tortuosity'] = np.min(tortiousities)
-    # out['tortuosity_list'] = tortiousities
 
     branch_list = [{'full_path': float(branch['full_path']),
                     'straight_path': float(branch['straight_path']),
                     'tortuosity': float(branch['tortuosity'])} for branch in branches]
-    # out['branch_list'] = branch_list
-    # out['branch_lengths_list'] = [float(branch['full_path']) for branch in branches]
-    # out['total_branch_length'] = np.sum(out['branch_lengths_list'])
-    # out['mean_branch_length'] = np.mean(out['branch_lengths_list'])
-    # out['max_branch_length'] = np.max(out['branch_lengths_list'])
 
     '''
-    Stuff we actually do:
+    Returned features:
     radius_list
     branches
     bifurcations
     endpoints
+    total_volume
+    num_branches
     '''
     out = {
         'branch_list': branches,
