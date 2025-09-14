@@ -1,7 +1,8 @@
-# Anat2Vessel Instructions
+# Anat2Vessel
+![Anat2Vess Logo](/figures/Logo.png)
+Anat2Vess is a deep learning based tool which allows for users to extract information about brain vasculature from anatomical (T1 & T2) MRI scans. The primary use case for this tool is to add vasculature information to existing dataset in which vessel imaging was not included.
 
-See our preprint [here](https://www.biorxiv.org/content/10.1101/2025.05.06.652518v1)
-for further details on training, validation and performance of our model.
+For further details on training, validation and performance of our model, see our paper [here](https://www.biorxiv.org/content/10.1101/2025.05.06.652518v1).
 
 ## Step 1: Data Preprocessing
 
@@ -91,14 +92,12 @@ If you used this tool to assist with work related to a publication please
 cite the following reference:
 ```
 @article {Gilmore2025.05.06.652518,
-	author = {Gilmore, Asa and Eshun, Anita Esi and Wu, Yue and Lee, Aaron Y and Rokem, Ariel},
+	author = {Gilmore, Asa and Eshun, Anita Esi and Wu, Yue and Lee, Aaron and Rokem, Ariel},
 	title = {Vessels hiding in plain sight: quantifying brain vascular morphology in anatomical MR images using deep learning},
 	elocation-id = {2025.05.06.652518},
 	year = {2025},
 	doi = {10.1101/2025.05.06.652518},
-	publisher = {Cold Spring Harbor Laboratory},
 	URL = {https://www.biorxiv.org/content/early/2025/05/11/2025.05.06.652518},
-	eprint = {https://www.biorxiv.org/content/early/2025/05/11/2025.05.06.652518.full.pdf},
 	journal = {bioRxiv}
 }
 ```
