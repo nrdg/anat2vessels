@@ -92,7 +92,7 @@ If you used this tool to assist with work related to a publication please
 cite the following reference:
 ```
 @article {Gilmore2025.05.06.652518,
-	author = {Gilmore, Asa and Eshun, Anita Esi and Wu, Yue and Lee, Aaron and Rokem, Ariel},
+	author = {Gilmore, Asa and Eshun, Anita Esi and Wu, Yue and Lee, Aaron Y and Rokem, Ariel},
 	title = {Vessels hiding in plain sight: quantifying brain vascular morphology in anatomical MR images using deep learning},
 	elocation-id = {2025.05.06.652518},
 	year = {2025},
