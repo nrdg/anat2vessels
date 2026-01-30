@@ -35,8 +35,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "spin >= 0.13",
-    "setuptools_scm",
+    "spin ~= 0.13",
+    "setuptools_scm[toml] ~= 7",
 ]
 doc = [
     "matplotlib",
