@@ -35,6 +35,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "spin >= 0.13",
     "setuptools_scm",
 ]
 doc = [
