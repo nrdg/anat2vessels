@@ -1,4 +1,4 @@
-"""Custom spin commands for trx-python development."""
+"""Custom spin commands for anat2vessels development."""
 
 import glob
 import os
@@ -9,7 +9,7 @@ import tempfile
 
 import click
 
-UPSTREAM_URL = "https://github.com/tee-ar-ex/trx-python.git"
+UPSTREAM_URL = "https://github.com/nrdg/anat2vessels.git"
 UPSTREAM_NAME = "upstream"
 
 
@@ -46,7 +46,7 @@ def setup():
 
     Run this once after cloning your fork.
     """
-    click.echo("Setting up trx-python development environment...\n")
+    click.echo("Setting up anat2vessels development environment...\n")
 
     # Check if in git repo
     if run(["git", "rev-parse", "--git-dir"], check=False) is None:
