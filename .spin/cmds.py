@@ -116,7 +116,7 @@ def test(pattern, verbose, pytest_args):
         spin test -v                 # Verbose output
         spin test -- -x --tb=short   # Pass args to pytest
     """
-    cmd = ["pytest", "trx/tests"]
+    cmd = ["pytest", "tests"]
 
     if pattern:
         cmd.extend(["-k", pattern])
@@ -165,7 +165,7 @@ def lint(fix):
         "codespell",
         "--skip",
         "*.pyc,.git,pyproject.toml,./docs/_build/*,*.egg-info,./build/*,./dist/*,./tmp/*",
-        "trx",
+        "src",
         "docs/source",
         ".spin",
     ]
@@ -241,10 +241,10 @@ def clean():  # noqa: C901
     """Clean up temporary files and build artifacts."""
     click.echo("Cleaning up temporary files...")
 
-    # Clean TRX temp directory
-    trx_tmp_dir = os.getenv("TRX_TMPDIR", tempfile.gettempdir())
-    if os.path.exists(trx_tmp_dir):
-        temp_files = glob.glob(os.path.join(trx_tmp_dir, "trx_*"))
+    # Clean ANAT2VESSELS temp directory
+    anat2vessels_tmp_dir = os.getenv("ANAT2VESSELS_TMPDIR", tempfile.gettempdir())
+    if os.path.exists(anat2vessels_tmp_dir):
+        temp_files = glob.glob(os.path.join(anat2vessels_tmp_dir, "anat2vessels_*"))
         for temp_dir in temp_files:
             if os.path.isdir(temp_dir):
                 click.echo(f"Removing temporary directory: {temp_dir}")

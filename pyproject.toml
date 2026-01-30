@@ -68,12 +68,12 @@ Homepage = "https://github.com/nrdg/anat2vessels"
 Documentation = "https://nrdg.github.io/anat2vessels/"
 Repository = "https://github.com/nrdg/anat2vessels"
 
-[tool.setuptools]
-packages = ["anat2vessels"]
-include-package-data = true
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["anat2vessels*"]
 
 [tool.setuptools_scm]
-write_to = "anat2vessels/version.py"
+write_to = "src/anat2vessels/version.py"
 fallback_version = "0.0"
 local_scheme = "no-local-version"
 
