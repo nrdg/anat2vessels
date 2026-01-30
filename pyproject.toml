@@ -1,0 +1,91 @@
+build-system]
+requires = ["setuptools >= 64", "wheel", "setuptools_scm[toml] >= 7"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anat2vessels"
+dynamic = ["version"]
+description = "Quantifying brain vascular morphology in anatomical MR images using deep learning"
+readme = "README.md"
+license = {text = "BSD License"}
+requires-python = ">=3.12"
+authors = [
+    {name = "Asa Gilmore"},
+    {name = "Ariel Rokem"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "nibabel >= 5",
+    "numpy >= 1.22",
+    "tqdm >= 4",
+    "pandas >= 1.5",
+    "ray >= 2.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "setuptools_scm",
+]
+doc = [
+    "matplotlib",
+    "numpydoc",
+    "pydata-sphinx-theme >= 0.16.1",
+    "sphinx >= 8.2.0",
+    "sphinx-autoapi >= 3.4.0",
+    "sphinx-design",
+    "sphinx-gallery",
+]
+style = [
+    "codespell",
+    "pre-commit",
+    "ruff",
+]
+test = [
+    "pytest >= 7",
+    "pytest-console-scripts >= 0",
+    "pytest-cov",
+]
+all = [
+    "anat2vessels[dev]",
+    "anat2vessels[doc]",
+    "anat2vessels[style]",
+    "anat2vessels[test]",
+]
+
+[project.urls]
+Homepage = "https://github.com/nrdg/anat2vessels"
+Documentation = "https://nrdg.github.io/anat2vessels/"
+Repository = "https://github.com/nrdg/anat2vessels"
+
+[tool.setuptools]
+packages = ["anat2vessels"]
+include-package-data = true
+
+[tool.setuptools_scm]
+write_to = "anat2vessels/version.py"
+fallback_version = "0.0"
+local_scheme = "no-local-version"
+
+[tool.codespell]
+ignore-words-list = "astroid"
+
+[tool.spin]
+package = "anat2vessels"
+
+[tool.spin.commands]
+"Setup" = [".spin/cmds.py:setup"]
+"Build" = ["spin.cmds.pip.install"]
+"Test" = [".spin/cmds.py:test", ".spin/cmds.py:lint"]
+"Docs" = [".spin/cmds.py:docs"]
+"Clean" = [".spin/cmds.py:clean"]
