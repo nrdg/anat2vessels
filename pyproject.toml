@@ -28,6 +28,8 @@ classifiers = [
 dependencies = [
     "nibabel >= 5",
     "numpy >= 1.22",
+    "scipy >= 1.10",
+    "scikit-image >= 0.19",
     "tqdm >= 4",
     "pandas >= 1.5",
     "ray >= 2.6",
@@ -35,8 +37,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "spin ~= 0.13",
-    "setuptools_scm[toml] ~= 7",
+    "spin == 0.13",
+    "setuptools_scm[toml] == 7",
 ]
 doc = [
     "matplotlib",

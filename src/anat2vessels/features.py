@@ -5,11 +5,11 @@ from skimage.morphology import skeletonize
 from tqdm import tqdm
 
 
-def _get_skel_seg_spacing(nifit_path):
-    nifit_img = nib.load(nifit_path)
-    voxel_spacing = nifit_img.header.get_zooms()[:3]
+def _get_skel_seg_spacing(nifti_path):
+    nifti_img = nib.load(nifti_path)
+    voxel_spacing = nifti_img.header.get_zooms()[:3]
 
-    segmentation = nifit_img.get_fdata().astype(bool)
+    segmentation = nifti_img.get_fdata().astype(bool)
     skeleton = _extract_skeleton(segmentation).astype(np.uint8)
 
     return skeleton, segmentation, voxel_spacing
@@ -70,7 +70,7 @@ def _get_num_neighbors(skeleton):
     return num_neighbors
 
 
-def _calc_tortuosities_also_lengths(labeled_branches, branch_labels, vox_spacing):
+def _calc_tortuosities_and_lengths(labeled_branches, branch_labels, vox_spacing):
     branches = []
     for i in tqdm(branch_labels):
         branch = (labeled_branches == i).astype(np.int8)
@@ -182,7 +182,7 @@ def extract_features(nifti_path):
 
     # out['num_branches'] = len(branch_labels)
 
-    branches = _calc_tortuosities_also_lengths(
+    branches = _calc_tortuosities_and_lengths(
         labeled_branches, branch_labels, voxel_spacing
     )
 

@@ -116,7 +116,7 @@ def test(pattern, verbose, pytest_args):
         spin test -v                 # Verbose output
         spin test -- -x --tb=short   # Pass args to pytest
     """
-    cmd = ["pytest", "tests"]
+    cmd = ["pytest", "test"]
 
     if pattern:
         cmd.extend(["-k", pattern])
