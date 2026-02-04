@@ -1,14 +1,36 @@
+import numpy as np
 from anat2vessels import features as avf
 
 
-def test_extract_features():
-    nifti_path = "tests/data/anat2vessels/test_skel_seg.nii.gz"
-    features = avf.extract_features(nifti_path)
+def test_num_neighbors():
+    skeleton = np.zeros((5, 5, 5), dtype=np.uint8)
+    skeleton[2, 2, 1] = 1
+    skeleton[2, 2, 2] = 1
+    skeleton[2, 2, 3] = 1
+    skeleton[2, 1, 2] = 1
+    skeleton[2, 3, 2] = 1
 
-    assert "branch_list" in features
-    assert "bifurcations" in features
-    assert "endpoints" in features
+    neighbor_count = avf.num_neighbors(skeleton)
 
-    assert len(features["branch_list"]) == 3
-    assert features["bifurcations"].sum() == 2
-    assert features["endpoints"].sum() == 4
+    assert neighbor_count[2, 2, 2] == 4
+    assert neighbor_count[2, 2, 1] == 1
+    assert neighbor_count[2, 2, 3] == 1
+    assert neighbor_count[2, 1, 2] == 1
+    assert neighbor_count[2, 3, 2] == 1
+
+
+def test_bifurcation_endpoint_arrays():
+    skeleton = np.zeros((5, 5, 5), dtype=np.uint8)
+    skeleton[2, 2, 1] = 1
+    skeleton[2, 2, 2] = 1
+    skeleton[2, 2, 3] = 1
+    skeleton[2, 1, 2] = 1
+    skeleton[2, 3, 2] = 1
+
+    bifurcations, endpoints = avf.bifurcation_endpoint_arrays(skeleton)
+
+    assert bifurcations[2, 2, 2] == 1
+    assert endpoints[2, 2, 1] == 1
+    assert endpoints[2, 2, 3] == 1
+    assert endpoints[2, 1, 2] == 1
+    assert endpoints[2, 3, 2] == 1
