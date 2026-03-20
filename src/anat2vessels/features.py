@@ -49,7 +49,7 @@ def extract_radius(segmentation, centerlines, voxel_spacing):
     return radius_matrix
 
 
-def skeleton(segmentation):
+def calculate_skeleton(segmentation):
     return skeletonize(segmentation, method="lee").astype(np.uint8, copy=False)
 
 
