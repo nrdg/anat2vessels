@@ -26,7 +26,7 @@ jobs:
         run: pip install spin ".[dev]"
 
       - name: Install
-        run: spin install
+        run: spin install ".[all]"
 
       - name: Test
         run: spin test
