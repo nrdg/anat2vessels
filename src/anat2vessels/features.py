@@ -1,44 +1,52 @@
 import numpy as np
+import nibabel as nib
 from scipy import ndimage as ndi
 from skimage.morphology import skeletonize
 from tqdm import tqdm
 
 
-def num_neighbors(skeleton):
-    kernel = np.ones((3, 3, 3), dtype=np.uint8)
-    kernel[1, 1, 1] = 0
-    return ndi.convolve(skeleton, kernel, mode="constant", cval=0)
+def _get_skel_seg_spacing(nifit_path):
+    nifit_img = nib.load(nifit_path)
+    voxel_spacing = nifit_img.header.get_zooms()[:3]
+
+    segmentation = nifit_img.get_fdata().astype(bool)
+    skeleton = _extract_skeleton(segmentation).astype(np.uint8)
+
+    return skeleton, segmentation, voxel_spacing
 
 
-def bifurcation_endpoint_arrays(skeleton):
-    neighbor_count = num_neighbors(skeleton)
-    bifurcations = neighbor_count > 2
-    endpoints = neighbor_count == 1
+def _get_bifurcation_endpoint_arrays(skeleton):
+    num_neighbors = _get_num_neighbors(skeleton)
+
+    bifurcations = num_neighbors > 2
+    endpoints = num_neighbors == 1
+
     bifurcations = bifurcations * skeleton
     endpoints = endpoints * skeleton
 
     return bifurcations, endpoints
 
 
-def labeled_branches(skeleton):
-    neighbor_count = num_neighbors(skeleton)
+def _get_labeled_branches(skeleton):
+    neighbor_count = _get_num_neighbors(skeleton)
     skeleton = skeleton.astype(np.uint8, copy=True)
+
     bifurcation = neighbor_count > 2
     skeleton[bifurcation] = 0
 
     struct = np.ones((3, 3, 3), dtype=np.uint8)
-    ll, num_branches = ndi.label(skeleton, structure=struct)
+    labeled_branches, num_branches = ndi.label(skeleton, structure=struct)
 
-    branch_idx = []
-    for ii in range(1, num_branches + 1):
-        if np.sum(ll == ii) < 2:
-            ll[ll == ii] = 0
+    branch_names = []
+    for i in range(1, num_branches + 1):
+        if np.sum(labeled_branches == i) < 2:
+            labeled_branches[labeled_branches == i] = 0
         else:
-            branch_idx.append(ii)
-    return ll, branch_idx
+            branch_names.append(i)
+    return labeled_branches, branch_names
 
 
-def extract_radius(segmentation, centerlines, voxel_spacing):
+def _extract_radius(segmentation, centerlines, voxel_spacing):
     image = segmentation
     skeleton = centerlines
     transf = ndi.distance_transform_edt(
@@ -49,11 +57,20 @@ def extract_radius(segmentation, centerlines, voxel_spacing):
     return radius_matrix
 
 
-def calculate_skeleton(segmentation):
-    return skeletonize(segmentation, method="lee").astype(np.uint8, copy=False)
+def _extract_skeleton(segmentation):
+    image = segmentation
+    skeleton = skeletonize(image, method="lee")
+    return skeleton.astype(np.uint8, copy=False)
 
 
-def tortuosities_and_lengths(labeled_branches, branch_labels, vox_spacing):
+def _get_num_neighbors(skeleton):
+    kernel = np.ones((3, 3, 3), dtype=np.uint8)
+    kernel[1, 1, 1] = 0
+    num_neighbors = ndi.convolve(skeleton, kernel, mode="constant", cval=0)
+    return num_neighbors
+
+
+def _calc_tortuosities_also_lengths(labeled_branches, branch_labels, vox_spacing):
     branches = []
     for i in tqdm(branch_labels):
         branch = (labeled_branches == i).astype(np.int8)
@@ -70,7 +87,8 @@ def tortuosities_and_lengths(labeled_branches, branch_labels, vox_spacing):
 
             if straight_path > full_path:
                 print(
-                    f"WARNING: Branch {i} full path: {full_path} < straight path: {straight_path}"
+                    f"WARNING: Branch {i} full path: {full_path}"
+                    f" < straight path: {straight_path}"
                 )
 
             tortuosity = full_path / straight_path
@@ -90,7 +108,7 @@ def _get_branch_array_by_label(labeled_branches, branch_label):
 
 def _get_points_in_order(branch, vox_spacing):
     path_cords = np.argwhere(branch == 1)
-    endpoints = np.argwhere(bifurcation_endpoint_arrays(branch)[1] == 1)
+    endpoints = np.argwhere(_get_bifurcation_endpoint_arrays(branch)[1] == 1)
 
     if len(endpoints) == 1:
         return endpoints
@@ -141,3 +159,22 @@ def _calc_shortest_path_from_points(points):
     diff = np.array(points[0]) - np.array(points[-1])
     length = np.linalg.norm(diff)
     return length
+
+
+def extract_features(nifti_path):
+    skeleton, segmentation, voxel_spacing = _get_skel_seg_spacing(nifti_path)
+    bifurcations, endpoints = _get_bifurcation_endpoint_arrays(skeleton)
+    radius_matrix = _extract_radius(segmentation, skeleton, voxel_spacing)
+    radius_list = radius_matrix[np.nonzero(radius_matrix)].tolist()
+    labeled_branches, branch_labels = _get_labeled_branches(skeleton)
+    branches = _calc_tortuosities_also_lengths(
+        labeled_branches, branch_labels, voxel_spacing
+    )
+    return {
+        "branch_list": branches,
+        "bifurcations": bifurcations,
+        "endpoints": endpoints,
+        "radius_list": radius_list,
+        "total_volume": float(segmentation.sum() * np.prod(voxel_spacing)),
+        "num_branches": len(branch_labels),
+    }
