@@ -23,7 +23,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install spin and dev dependencies
-        run: pip install spin ".[dev]"
+        run: pip install spin
 
       - name: Install
         run: spin install ".[all]"
