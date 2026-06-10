@@ -1,6 +1,6 @@
 import os
 import argparse
-from anat2vessel.feature_extraction import extract_features
+from anat2vessel.features import extract_features
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -65,7 +65,8 @@ def ray_main(args):
 
     if not data_list:
         print(
-            "No valid data was processed. Check the input files and error messages above."
+            "No valid data was processed."
+            "Check the input files and error messages above."
         )
         return
 
@@ -131,7 +132,8 @@ def out_list_to_df(out_list):
             df_list.append(out)
         except Exception as e:
             print(
-                f"Error processing data for subject {item.get('sub_id', 'unknown')}: {str(e)}"
+                "Error processing data for subject"
+                f"{item.get('sub_id', 'unknown')}: {str(e)}"
             )
             continue
 
@@ -146,11 +148,11 @@ if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--input_dir", type=str, required=True)
     args.add_argument("--output_path", type=str, required=True)
-    args.add_argument("--no_ray", type=bool, default=False)
+    args.add_argument("--use_ray", type=bool, default=True)
 
     args = args.parse_args()
 
-    if ray is not None and not args.no_ray:
+    if ray is not None and args.use_ray:
         ray_main(args)
     else:
         main(args)
