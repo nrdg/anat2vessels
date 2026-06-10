@@ -1,6 +1,6 @@
 import os
 import argparse
-from anat2vessel.features import extract_features
+from anat2vessels.features import extract_features
 import pandas as pd
 import numpy as np
 from tqdm import tqdm

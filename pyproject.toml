@@ -33,6 +33,7 @@ dependencies = [
     "tqdm >= 4",
     "pandas >= 1.5",
     "ray >= 2.6",
+    "antspyx",
 ]
 
 [project.optional-dependencies]
