@@ -34,6 +34,8 @@ dependencies = [
     "pandas >= 1.5",
     "ray >= 2.6",
     "antspyx",
+    "antspynet",
+    "pooch >= 1",
 ]
 
 [project.optional-dependencies]

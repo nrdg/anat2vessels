@@ -9,7 +9,22 @@ try:
 except ImportError:
     antspynet = None
 
-REF_IMG_PATH = "ref.nii.gz"
+_REF_IMG_PATH = None
+
+
+def _get_ref_path():
+    global _REF_IMG_PATH
+    if _REF_IMG_PATH is None:
+        from anat2vessels.data.fetch import fetch_ref_img
+
+        _REF_IMG_PATH = fetch_ref_img()
+    return _REF_IMG_PATH
+
+
+def __getattr__(name):
+    if name == "REF_IMG_PATH":
+        return _get_ref_path()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def skull_strip(img, modality="t1"):
@@ -33,7 +48,9 @@ def skull_strip(img, modality="t1"):
     return brain_extracted
 
 
-def preprocess_img(in_file, out_file, ref_file, modality="t1", skull_strip=False):
+def preprocess_img(
+    in_file, out_file, modality="t1", do_skull_strip=False, ref_path=None
+):
     """
     Skull stripping (optional), registration to ref, resampling, cropping.
 
@@ -45,19 +62,20 @@ def preprocess_img(in_file, out_file, ref_file, modality="t1", skull_strip=False
     out_file : str
         Full path to the output file.
 
-    ref_file : str
-        Full path to the registration/resampling reference.
-
     modality : str, optional. One of ['t1', 't2']
 
-    skull_strip : bool, optional
+    do_skull_strip : bool, optional
         Whether to strip the skull from the brain. Default: False.
+
+    ref_path : str, optional
+        Path to reference image. Default: REF_IMG_PATH.
     """
     img = ants.image_read(in_file)
-    ref_img = ants.image_read(ref_file)
-    ref_img = ants.image_read(REF_IMG_PATH)
+    if ref_path is None:
+        ref_path = _get_ref_path()
+    ref_img = ants.image_read(ref_path)
 
-    if skull_strip:
+    if do_skull_strip:
         img = skull_strip(img, modality=modality)
 
     # Uses rigid so size doesn't change:
