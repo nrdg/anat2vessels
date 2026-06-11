@@ -246,3 +246,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# roborev snapshots
+/.roborev/
