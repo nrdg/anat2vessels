@@ -40,7 +40,9 @@ def skull_strip(img, modality="t1"):
     return brain_extracted
 
 
-def preprocess_img(in_file, out_file, modality="t1", do_skull_strip=False):
+def preprocess_img(
+    in_file, out_file, modality="t1", do_skull_strip=False, ref_path=None
+):
     """
     Skull stripping (optional), registration to ref, resampling, cropping.
 
@@ -56,9 +58,12 @@ def preprocess_img(in_file, out_file, modality="t1", do_skull_strip=False):
 
     do_skull_strip : bool, optional
         Whether to strip the skull from the brain. Default: False.
+
+    ref_path : str, optional
+        Path to reference image. Default: REF_IMG_PATH.
     """
     img = ants.image_read(in_file)
-    ref_img = ants.image_read(REF_IMG_PATH)
+    ref_img = ants.image_read(ref_path or REF_IMG_PATH)
 
     if do_skull_strip:
         img = skull_strip(img, modality=modality)
