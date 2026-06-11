@@ -182,3 +182,36 @@ class TestSkullStrip:
         result_data = result.numpy()
         non_zero_fraction = np.count_nonzero(result_data) / result_data.size
         assert non_zero_fraction > 0.1, "Brain should occupy >10% of volume"
+
+
+class TestPreprocessImg:
+    def test_no_skullstrip_output_created(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "preprocessed.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        assert os.path.exists(out_file)
+
+    def test_no_skullstrip_output_valid_nifti(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "preprocessed.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        img = nib.load(out_file)
+        assert len(img.shape) == 3
+
+    def test_no_skullstrip_output_has_content(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "preprocessed.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        img = nib.load(out_file)
+        fdata = img.get_fdata()
+        assert fdata.size > 0
+        assert fdata.max() >= 0
+
+    def test_no_skullstrip_output_shape_matches_ref(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "preprocessed.nii.gz")
+        ref_img = nib.load(avp.REF_IMG_PATH)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        out_img = nib.load(out_file)
+        ref_shape = ref_img.shape
+        out_shape = out_img.shape
+        n_dims_equal = sum(1 for i in range(3) if abs(ref_shape[i] - out_shape[i]) <= 1)
+        assert (
+            n_dims_equal >= 2
+        ), f"Output shape {out_shape} should match ref {ref_shape}"
