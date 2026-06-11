@@ -4,6 +4,37 @@ import ants
 import nibabel as nib
 
 from anat2vessels import preprocess as avp
+from anat2vessels.data.fetch import fetch_test_data
+
+
+class TestFetchTestData:
+    def test_download_returns_dict(self):
+        data = fetch_test_data()
+        assert isinstance(data, dict)
+
+    def test_download_has_t1w_key(self):
+        data = fetch_test_data()
+        assert "t1w" in data
+
+    def test_download_has_t2w_key(self):
+        data = fetch_test_data()
+        assert "t2w" in data
+
+    def test_download_t1w_file_exists(self):
+        data = fetch_test_data()
+        assert os.path.exists(data["t1w"])
+
+    def test_download_t2w_file_exists(self):
+        data = fetch_test_data()
+        assert os.path.exists(data["t2w"])
+
+    def test_download_t1w_is_nifti(self):
+        data = fetch_test_data()
+        assert data["t1w"].endswith(".nii.gz")
+
+    def test_download_t2w_is_nifti(self):
+        data = fetch_test_data()
+        assert data["t2w"].endswith(".nii.gz")
 
 
 class TestRefImgPath:
