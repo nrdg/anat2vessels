@@ -306,3 +306,26 @@ class TestPreprocessImg:
                 f"Origin mismatch at dim {i}: "
                 f"ref={ref_origin[i]}, out={out_origin[i]}"
             )
+
+    def test_identity_registration_ref_to_self(self, tmp_path):
+        out_file = str(tmp_path / "identity.nii.gz")
+        avp.preprocess_img(avp.REF_IMG_PATH, out_file, modality="t1", skull_strip=False)
+        assert os.path.exists(out_file)
+        ref_data = ants.image_read(avp.REF_IMG_PATH).numpy()
+        out_data = ants.image_read(out_file).numpy()
+        assert out_data.shape == ref_data.shape
+        corr = np.corrcoef(ref_data.ravel(), out_data.ravel())[0, 1]
+        assert corr > 0.99, f"Self-registration should preserve content, corr={corr}"
+
+    def test_identity_registration_t1w_to_t1w(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "t1w_identity_test.nii.gz")
+        t1w_ref = str(tmp_path / "t1w_copy.nii.gz")
+        img = ants.image_read(t1w_path)
+        ants.image_write(img, t1w_ref)
+        avp.preprocess_img(t1w_ref, out_file, modality="t1", skull_strip=False)
+        out_data = ants.image_read(out_file).numpy()
+        ref_img = ants.image_read(avp.REF_IMG_PATH).numpy()
+        ratio = min(out_data.size, ref_img.size) / max(out_data.size, ref_img.size)
+        assert (
+            ratio > 0.5
+        ), "T1w-to-ref registration output should have size comparable to ref"
