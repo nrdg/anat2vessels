@@ -4,7 +4,7 @@ import ants
 import nibabel as nib
 
 from anat2vessels import preprocess as avp
-from anat2vessels.data.fetch import fetch_test_data
+from anat2vessels.data.fetch import fetch_test_data, REGISTRY
 
 
 class TestFetchTestData:
@@ -35,6 +35,20 @@ class TestFetchTestData:
     def test_download_t2w_is_nifti(self):
         data = fetch_test_data()
         assert data["t2w"].endswith(".nii.gz")
+
+    def test_caching_returns_same_path(self):
+        data1 = fetch_test_data()
+        data2 = fetch_test_data()
+        assert data1["t1w"] == data2["t1w"]
+        assert data1["t2w"] == data2["t2w"]
+
+    def test_cache_dir_exists(self):
+        cache_dir = REGISTRY.abspath
+        assert os.path.isdir(cache_dir)
+
+    def test_cached_files_exist(self):
+        t1w_path = fetch_test_data()["t1w"]
+        assert os.path.isfile(t1w_path)
 
 
 class TestRefImgPath:
