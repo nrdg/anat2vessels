@@ -12,12 +12,6 @@ def _load_seg_spacing(nifti_path):
     return segmentation, voxel_spacing
 
 
-def _get_skel_seg_spacing(nifit_path):
-    segmentation, voxel_spacing = _load_seg_spacing(nifit_path)
-    skeleton = _extract_skeleton(segmentation).astype(np.uint8)
-    return skeleton, segmentation, voxel_spacing
-
-
 def _get_bifurcation_endpoint_arrays(skeleton):
     num_neighbors = _get_num_neighbors(skeleton)
 

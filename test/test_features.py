@@ -15,6 +15,7 @@ from anat2vessels.features import (
     _get_num_neighbors,
     _get_points_in_order,
     _get_skel_seg_spacing,
+    compute_features,
     extract_features,
 )
 
@@ -504,3 +505,48 @@ class TestExtractFeaturesEmpty:
         nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
         result = extract_features(nii_path)
         assert result["bifurcations"].sum() == 0
+
+
+class TestComputeFeatures:
+    def test_with_numpy_arrays(self):
+        seg = np.zeros((10, 10, 10), dtype=bool)
+        seg[5, 5, 2:8] = True
+        result = compute_features(seg, (1.0, 1.0, 1.0))
+        expected_keys = {
+            "branch_list",
+            "bifurcations",
+            "endpoints",
+            "radius_list",
+            "total_volume",
+            "num_branches",
+        }
+        assert set(result.keys()) == expected_keys
+
+    def test_total_matches_extract_features(self, tmp_path):
+        seg = np.zeros((10, 10, 10), dtype=bool)
+        seg[5, 5, 2:8] = True
+        array_result = compute_features(seg, (1.0, 1.0, 1.0))
+
+        path = str(tmp_path / "test.nii.gz")
+        img = nib.Nifti1Image(seg.astype(np.uint8), np.eye(4))
+        img.header.set_zooms((1.0, 1.0, 1.0))
+        nib.save(img, path)
+        nifti_result = extract_features(path)
+
+        assert array_result["total_volume"] == nifti_result["total_volume"]
+        assert array_result["num_branches"] == nifti_result["num_branches"]
+
+    def test_empty_segmentation(self):
+        seg = np.zeros((10, 10, 10), dtype=bool)
+        result = compute_features(seg, (1.0, 1.0, 1.0))
+        assert result["total_volume"] == 0.0
+        assert result["num_branches"] == 0
+        assert result["radius_list"] == []
+        assert result["branch_list"] == []
+
+    def test_non_uniform_spacing(self):
+        seg = np.zeros((10, 10, 10), dtype=bool)
+        seg[5, 5, 2:8] = True
+        result = compute_features(seg, (2.0, 1.0, 3.0))
+        assert result["total_volume"] > 0
+        assert result["num_branches"] >= 0
