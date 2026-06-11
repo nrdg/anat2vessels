@@ -1,5 +1,6 @@
 import numpy as np
 
+import nibabel as nib
 import pytest
 
 from anat2vessels.features import (
@@ -13,6 +14,8 @@ from anat2vessels.features import (
     _get_labeled_branches,
     _get_num_neighbors,
     _get_points_in_order,
+    _get_skel_seg_spacing,
+    extract_features,
 )
 
 
@@ -367,3 +370,137 @@ class TestCalcTortuositiesAlsoLengths:
         labeled[2, 2, 2] = 1
         branches = _calc_tortuosities_also_lengths(labeled, [1], (1.0, 1.0, 1.0))
         assert len(branches) == 0
+
+
+class TestGetSkelSegSpacing:
+    def _make_nifti(self, data, spacing, tmp_path):
+        path = str(tmp_path / "test.nii.gz")
+        img = nib.Nifti1Image(data, np.eye(4))
+        img.header.set_zooms(spacing)
+        nib.save(img, path)
+        return path
+
+    def test_returns_correct_spacing(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.5, 1.0, 2.0), tmp_path)
+        skeleton, seg, spacing = _get_skel_seg_spacing(nii_path)
+        assert spacing == (1.5, 1.0, 2.0)
+
+    def test_segmentation_is_bool(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        _, seg, _ = _get_skel_seg_spacing(nii_path)
+        assert seg.dtype == bool
+
+    def test_skeleton_is_binary(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        skeleton, _, _ = _get_skel_seg_spacing(nii_path)
+        assert skeleton.dtype == np.uint8
+        assert set(np.unique(skeleton)).issubset({0, 1})
+
+    def test_skeleton_is_thinner_or_equal(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        skeleton, seg, _ = _get_skel_seg_spacing(nii_path)
+        assert skeleton.sum() <= seg.sum()
+
+
+class TestExtractFeatures:
+    def _make_nifti(self, data, spacing, tmp_path):
+        path = str(tmp_path / "test.nii.gz")
+        img = nib.Nifti1Image(data, np.eye(4))
+        img.header.set_zooms(spacing)
+        nib.save(img, path)
+        return path
+
+    def test_returns_dict_with_expected_keys(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        expected_keys = {
+            "branch_list",
+            "bifurcations",
+            "endpoints",
+            "radius_list",
+            "total_volume",
+            "num_branches",
+        }
+        assert set(result.keys()) == expected_keys
+
+    def test_num_branches(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert result["num_branches"] >= 0
+        assert isinstance(result["num_branches"], int)
+
+    def test_total_volume_positive(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert result["total_volume"] > 0.0
+
+    def test_bifurcations_is_array(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert isinstance(result["bifurcations"], np.ndarray)
+        assert isinstance(result["endpoints"], np.ndarray)
+
+    def test_radius_list_contents(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert isinstance(result["radius_list"], list)
+        assert all(r > 0 for r in result["radius_list"])
+
+    def test_branch_list_is_list(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert isinstance(result["branch_list"], list)
+
+
+class TestExtractFeaturesEmpty:
+    def _make_nifti(self, data, spacing, tmp_path):
+        path = str(tmp_path / "test.nii.gz")
+        img = nib.Nifti1Image(data, np.eye(4))
+        img.header.set_zooms(spacing)
+        nib.save(img, path)
+        return path
+
+    def test_all_zero_volume(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert result["total_volume"] == 0.0
+
+    def test_empty_radius_list(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert result["radius_list"] == []
+
+    def test_zero_branches(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert result["num_branches"] == 0
+        assert result["branch_list"] == []
+
+    def test_bifurcations_all_zero(self, tmp_path):
+        data = np.zeros((10, 10, 10), dtype=np.uint8)
+        nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
+        result = extract_features(nii_path)
+        assert result["bifurcations"].sum() == 0
