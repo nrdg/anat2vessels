@@ -50,6 +50,42 @@ class TestFetchTestData:
         t1w_path = fetch_test_data()["t1w"]
         assert os.path.isfile(t1w_path)
 
+    def test_t1w_valid_nifti(self):
+        data = fetch_test_data()
+        img = nib.load(data["t1w"])
+        assert len(img.shape) == 3
+        assert img.shape == (274, 384, 384)
+
+    def test_t2w_valid_nifti(self):
+        data = fetch_test_data()
+        img = nib.load(data["t2w"])
+        assert len(img.shape) == 3
+        assert img.shape == (274, 384, 384)
+
+    def test_t1w_can_be_read_by_ants(self):
+        data = fetch_test_data()
+        img = ants.image_read(data["t1w"])
+        assert img.dimension == 3
+
+    def test_t2w_can_be_read_by_ants(self):
+        data = fetch_test_data()
+        img = ants.image_read(data["t2w"])
+        assert img.dimension == 3
+
+    def test_t1w_data_range(self):
+        data = fetch_test_data()
+        img = nib.load(data["t1w"])
+        fdata = img.get_fdata()
+        assert fdata.min() >= 0
+        assert fdata.max() >= 1
+
+    def test_t2w_data_range(self):
+        data = fetch_test_data()
+        img = nib.load(data["t2w"])
+        fdata = img.get_fdata()
+        assert fdata.min() >= 0
+        assert fdata.max() >= 1
+
 
 class TestRefImgPath:
     def test_ref_img_path_exists(self):
