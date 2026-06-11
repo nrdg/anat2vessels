@@ -1,4 +1,6 @@
+import os.path as op
 import ants
+import anat2vessels.data as avd
 
 try:
     import ray
@@ -9,7 +11,7 @@ try:
 except ImportError:
     antspynet = None
 
-REF_IMG_PATH = "ref.nii.gz"
+REF_IMG_PATH = op.join(op.split(avd.__file__)[0], "ref.nii.gz")
 
 
 def skull_strip(img, modality="t1"):
@@ -33,7 +35,7 @@ def skull_strip(img, modality="t1"):
     return brain_extracted
 
 
-def preprocess_img(in_file, out_file, ref_file, modality="t1", skull_strip=False):
+def preprocess_img(in_file, out_file, modality="t1", skull_strip=False):
     """
     Skull stripping (optional), registration to ref, resampling, cropping.
 
@@ -45,16 +47,12 @@ def preprocess_img(in_file, out_file, ref_file, modality="t1", skull_strip=False
     out_file : str
         Full path to the output file.
 
-    ref_file : str
-        Full path to the registration/resampling reference.
-
     modality : str, optional. One of ['t1', 't2']
 
     skull_strip : bool, optional
         Whether to strip the skull from the brain. Default: False.
     """
     img = ants.image_read(in_file)
-    ref_img = ants.image_read(ref_file)
     ref_img = ants.image_read(REF_IMG_PATH)
 
     if skull_strip:
