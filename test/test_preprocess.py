@@ -2,6 +2,7 @@ import os
 
 import ants
 import nibabel as nib
+import numpy as np
 
 from anat2vessels import preprocess as avp
 from anat2vessels.data.fetch import fetch_test_data, REGISTRY
@@ -101,3 +102,24 @@ class TestRefImgPath:
     def test_ref_img_can_be_read_by_ants(self):
         img = ants.image_read(avp.REF_IMG_PATH)
         assert img.dimension == 3
+
+
+class TestSkullStrip:
+    def test_skull_strip_t1_output_type(self, ants_t1w):
+        result = avp.skull_strip(ants_t1w, modality="t1")
+        assert hasattr(result, "shape")
+        assert result.dimension == 3
+
+    def test_skull_strip_t1_changes_image(self, ants_t1w):
+        result = avp.skull_strip(ants_t1w, modality="t1")
+        orig_data = ants_t1w.numpy()
+        result_data = result.numpy()
+        assert result_data.shape == orig_data.shape
+        assert np.any(result_data != orig_data)
+
+    def test_skull_strip_t1_reduces_intensity_outside_brain(self, ants_t1w):
+        result = avp.skull_strip(ants_t1w, modality="t1")
+        orig_data = ants_t1w.numpy()
+        result_data = result.numpy()
+        zeroed_outside = np.sum(result_data == 0) > np.sum(orig_data == 0)
+        assert zeroed_outside, "Skull stripping should zero more voxels"
