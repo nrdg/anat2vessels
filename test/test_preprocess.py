@@ -215,3 +215,33 @@ class TestPreprocessImg:
         assert (
             n_dims_equal >= 2
         ), f"Output shape {out_shape} should match ref {ref_shape}"
+
+    def test_with_skullstrip_output_created(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "skullstripped_preprocessed.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=True)
+        assert os.path.exists(out_file)
+
+    def test_with_skullstrip_output_valid_nifti(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "skullstripped_preprocessed.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=True)
+        img = nib.load(out_file)
+        assert len(img.shape) == 3
+
+    def test_with_skullstrip_output_has_content(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "skullstripped_preprocessed.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=True)
+        img = nib.load(out_file)
+        fdata = img.get_fdata()
+        assert fdata.size > 0
+        assert fdata.max() >= 0
+
+    def test_with_skullstrip_more_zeros_than_without(self, t1w_path, tmp_path):
+        out_no_ss = str(tmp_path / "no_ss.nii.gz")
+        out_with_ss = str(tmp_path / "with_ss.nii.gz")
+        avp.preprocess_img(t1w_path, out_no_ss, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_with_ss, modality="t1", skull_strip=True)
+        img_no_ss = nib.load(out_no_ss).get_fdata()
+        img_with_ss = nib.load(out_with_ss).get_fdata()
+        zeros_fraction_no_ss = np.count_nonzero(img_no_ss == 0) / img_no_ss.size
+        zeros_fraction_with_ss = np.count_nonzero(img_with_ss == 0) / img_with_ss.size
+        assert zeros_fraction_with_ss > zeros_fraction_no_ss
