@@ -329,3 +329,43 @@ class TestPreprocessImg:
         assert (
             ratio > 0.5
         ), "T1w-to-ref registration output should have size comparable to ref"
+
+    def test_missing_input_raises(self, tmp_path):
+        out_file = str(tmp_path / "nonexistent.nii.gz")
+        with pytest.raises(Exception):
+            avp.preprocess_img(
+                "/nonexistent/path/input.nii.gz",
+                out_file,
+                modality="t1",
+                skull_strip=False,
+            )
+
+    def test_invalid_modality_raises(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "bad_modality.nii.gz")
+        with pytest.raises(Exception):
+            avp.preprocess_img(
+                t1w_path,
+                out_file,
+                modality="invalid",
+                skull_strip=False,
+            )
+
+    def test_empty_modality_raises(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "empty_modality.nii.gz")
+        with pytest.raises(Exception):
+            avp.preprocess_img(
+                t1w_path,
+                out_file,
+                modality="",
+                skull_strip=False,
+            )
+
+    def test_nonexistent_outdir_raises(self, t1w_path):
+        bad_out = "/nonexistent_directory/output.nii.gz"
+        with pytest.raises(Exception):
+            avp.preprocess_img(
+                t1w_path,
+                bad_out,
+                modality="t1",
+                skull_strip=False,
+            )
