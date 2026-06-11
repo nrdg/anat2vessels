@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from anat2vessels.vessels2csv import out_list_to_df
 
@@ -121,3 +122,71 @@ class TestOutListToDfEdgeCases:
         )
         assert len(result) == 1
         assert result["sub_id"].iloc[0] == "sub-01"
+
+
+class TestOutListToDfStats:
+    def test_mean_radius(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        expected = (1.5 + 2.0 + 2.5) / 3
+        assert result["mean_radius"].iloc[0] == pytest.approx(expected)
+
+    def test_max_radius(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        assert result["max_radius"].iloc[0] == 2.5
+
+    def test_min_radius(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        assert result["min_radius"].iloc[0] == 1.5
+
+    def test_mean_tortuosity(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        assert result["mean_tortuosity"].iloc[0] == 1.25
+
+    def test_tortuosity_range(self):
+        features = {
+            "sub_id": "test",
+            "num_branches": 2,
+            "total_volume": 10.0,
+            "bifurcations": np.array([0, 0]),
+            "endpoints": np.array([1, 1]),
+            "radius_list": [1.0],
+            "branch_list": [
+                {"full_path": 1.0, "straight_path": 1.0, "tortuosity": 1.0},
+                {"full_path": 2.0, "straight_path": 1.0, "tortuosity": 2.0},
+            ],
+        }
+        result = out_list_to_df([features])
+        assert result["max_tortuosity"].iloc[0] == 2.0
+        assert result["min_tortuosity"].iloc[0] == 1.0
+        assert result["mean_tortuosity"].iloc[0] == 1.5
+
+    def test_total_branch_length(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        expected = 10.0 + 15.0
+        assert result["total_branch_length"].iloc[0] == pytest.approx(expected)
+
+    def test_mean_branch_length(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        expected = (10.0 + 15.0) / 2
+        assert result["mean_branch_length"].iloc[0] == pytest.approx(expected)
+
+    def test_max_branch_length(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        assert result["max_branch_length"].iloc[0] == 15.0
+
+    def test_bifurcations_sum(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        expected = float(single_subject_features["bifurcations"].sum())
+        assert result["bifurcations"].iloc[0] == expected
+
+    def test_endpoints_sum(self, single_subject_features):
+        result = out_list_to_df([single_subject_features])
+        expected = float(single_subject_features["endpoints"].sum())
+        assert result["endpoints"].iloc[0] == expected
+
+    def test_multiple_subjects_stats(self, multi_subject_features):
+        result = out_list_to_df(multi_subject_features)
+        assert result["mean_radius"].iloc[0] == (1.0 + 2.0) / 2
+        assert result["max_radius"].iloc[0] == 2.0
+        assert result["min_radius"].iloc[0] == 1.0
+        assert result["mean_radius"].iloc[1] == 3.0
