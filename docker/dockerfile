@@ -24,7 +24,8 @@ RUN wget -q https://huggingface.co/huggingbrain/AnatomicalVesselSeg/resolve/main
     && nnUNetv2_install_pretrained_model_from_zip t1t2_model.zip \
     && rm t1t2_model.zip
 
-COPY . /src/anat2vessels
+COPY pyproject.toml README.md /src/anat2vessels/
+COPY src/ /src/anat2vessels/src/
 RUN pip install --no-cache-dir -e "/src/anat2vessels[docker]"
 
 COPY docker/entrypoint.py /usr/local/bin/a2v-pipeline
