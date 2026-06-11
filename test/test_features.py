@@ -8,6 +8,7 @@ from anat2vessels.features import (
     _extract_radius,
     _extract_skeleton,
     _get_bifurcation_endpoint_arrays,
+    _get_branch_array_by_label,
     _get_labeled_branches,
     _get_num_neighbors,
     _get_points_in_order,
@@ -307,3 +308,22 @@ class TestCalcShortestPathFromPoints:
         shortest = _calc_shortest_path_from_points(points)
         assert shortest < full
         assert shortest == 5.0
+
+
+class TestGetBranchArrayByLabel:
+    def test_existing_label(self, straight_line_skeleton):
+        labeled, names = _get_labeled_branches(straight_line_skeleton)
+        branch = _get_branch_array_by_label(labeled, names[0])
+        assert branch.dtype == np.int8
+        assert branch.sum() > 0
+        assert branch.shape == straight_line_skeleton.shape
+
+    def test_nonexistent_label(self):
+        labeled = np.zeros((5, 5, 5), dtype=np.int32)
+        branch = _get_branch_array_by_label(labeled, 99)
+        assert branch.sum() == 0
+
+    def test_all_zeros(self):
+        labeled = np.zeros((5, 5, 5), dtype=np.int32)
+        branch = _get_branch_array_by_label(labeled, 1)
+        assert branch.sum() == 0
