@@ -1,6 +1,7 @@
 import numpy as np
 
 from anat2vessels.features import (
+    _extract_skeleton,
     _get_bifurcation_endpoint_arrays,
     _get_labeled_branches,
     _get_num_neighbors,
@@ -138,3 +139,28 @@ class TestGetLabeledBranches:
                 for x in range(t_shape_skeleton.shape[2]):
                     if bif[z, y, x]:
                         assert labeled[z, y, x] == 0
+
+
+class TestExtractSkeleton:
+    def test_output_is_uint8(self, straight_line_skeleton):
+        seg = straight_line_skeleton.astype(bool)
+        skel = _extract_skeleton(seg)
+        assert skel.dtype == np.uint8
+
+    def test_thickens_line(self):
+        seg = np.zeros((7, 7, 7), dtype=bool)
+        seg[3, 3, 2:5] = True
+        skel = _extract_skeleton(seg)
+        assert skel.sum() <= seg.sum()
+
+    def test_empty_segmentation(self):
+        seg = np.zeros((5, 5, 5), dtype=bool)
+        skel = _extract_skeleton(seg)
+        assert skel.sum() == 0
+
+    def test_single_voxel(self):
+        seg = np.zeros((5, 5, 5), dtype=bool)
+        seg[2, 2, 2] = True
+        skel = _extract_skeleton(seg)
+        assert skel[2, 2, 2] == 1
+        assert skel.sum() == 1
