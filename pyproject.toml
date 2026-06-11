@@ -68,7 +68,7 @@ all = [
     "anat2vessels[style]",
     "anat2vessels[test]",
 ]
-docker = [
+bids = [
     "pybids >= 0.17",
 ]
 

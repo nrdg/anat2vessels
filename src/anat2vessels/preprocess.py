@@ -119,43 +119,44 @@ def preprocess_bids(
 
 def _preprocess_subject(layout, subject, model, skull_strip, output_dir):
     if model in ("t1", "t1t2"):
-        t1_file = layout.get(
-            subject=subject, suffix="T1w", extension=".nii.gz", return_type="file"
+        _process_modality(
+            layout,
+            subject,
+            "T1w",
+            [".nii.gz", ".nii"],
+            output_dir,
+            "t1",
+            "0000",
+            skull_strip,
         )
-        if not t1_file:
-            t1_file = layout.get(
-                subject=subject, suffix="T1w", extension=".nii", return_type="file"
-            )
-        if t1_file:
-            out = op.join(output_dir, f"{subject}_0000.nii.gz")
-            if not op.exists(out):
-                preprocess_img(t1_file[0], out, modality="t1", do_skull_strip=skull_strip)
 
-    if model == "t2":
-        t2_file = layout.get(
-            subject=subject, suffix="T2w", extension=".nii.gz", return_type="file"
-        )
-        if not t2_file:
-            t2_file = layout.get(
-                subject=subject, suffix="T2w", extension=".nii", return_type="file"
-            )
-        if t2_file:
-            out = op.join(output_dir, f"{subject}_0000.nii.gz")
-            if not op.exists(out):
-                preprocess_img(t2_file[0], out, modality="t2", do_skull_strip=skull_strip)
 
-    if model == "t1t2":
-        t2_file = layout.get(
-            subject=subject, suffix="T2w", extension=".nii.gz", return_type="file"
+    if model in ("t2", "t1t2"):
+        _process_modality(
+            layout,
+            subject,
+            "T2w",
+            [".nii.gz", ".nii"],
+            output_dir,
+            "t2",
+            "0001" if model == "t1t2" else "0000",
+            skull_strip,
         )
-        if not t2_file:
-            t2_file = layout.get(
-                subject=subject, suffix="T2w", extension=".nii", return_type="file"
-            )
-        if t2_file:
-            out = op.join(output_dir, f"{subject}_0001.nii.gz")
+
+
+
+def _process_modality(
+    layout, subject, suffix, extensions, output_dir, modality, suffix_ext, skull_strip
+):
+    for ext in extensions:
+        file = layout.get(
+            subject=subject, suffix=suffix, extension=ext, return_type="file"
+        )
+        if file:
+            out = op.join(output_dir, f"{subject}_{suffix_ext}.nii.gz")
             if not op.exists(out):
-                preprocess_img(t2_file[0], out, modality="t2", do_skull_strip=skull_strip)
+                preprocess_img(file[0], out, modality=modality, do_skull_strip=skull_strip)
+            return
 
 
 def run():
