@@ -3,6 +3,7 @@ import os
 import ants
 import nibabel as nib
 import numpy as np
+import pytest
 
 from anat2vessels import preprocess as avp
 from anat2vessels.data.fetch import fetch_test_data, REGISTRY
@@ -142,3 +143,11 @@ class TestSkullStrip:
         result_data = result.numpy()
         zeroed_outside = np.sum(result_data == 0) > np.sum(orig_data == 0)
         assert zeroed_outside, "Skull stripping should zero more voxels"
+
+    def test_skull_strip_invalid_modality_raises(self, ants_t1w):
+        with pytest.raises(Exception):
+            avp.skull_strip(ants_t1w, modality="invalid")
+
+    def test_skull_strip_empty_modality_raises(self, ants_t1w):
+        with pytest.raises(Exception):
+            avp.skull_strip(ants_t1w, modality="")
