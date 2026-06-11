@@ -5,13 +5,16 @@ from skimage.morphology import skeletonize
 from tqdm import tqdm
 
 
+def _load_seg_spacing(nifti_path):
+    img = nib.load(nifti_path)
+    voxel_spacing = img.header.get_zooms()[:3]
+    segmentation = img.get_fdata().astype(bool)
+    return segmentation, voxel_spacing
+
+
 def _get_skel_seg_spacing(nifit_path):
-    nifit_img = nib.load(nifit_path)
-    voxel_spacing = nifit_img.header.get_zooms()[:3]
-
-    segmentation = nifit_img.get_fdata().astype(bool)
+    segmentation, voxel_spacing = _load_seg_spacing(nifit_path)
     skeleton = _extract_skeleton(segmentation).astype(np.uint8)
-
     return skeleton, segmentation, voxel_spacing
 
 
@@ -161,8 +164,8 @@ def _calc_shortest_path_from_points(points):
     return length
 
 
-def extract_features(nifti_path):
-    skeleton, segmentation, voxel_spacing = _get_skel_seg_spacing(nifti_path)
+def compute_features(segmentation, voxel_spacing):
+    skeleton = _extract_skeleton(segmentation).astype(np.uint8)
     bifurcations, endpoints = _get_bifurcation_endpoint_arrays(skeleton)
     radius_matrix = _extract_radius(segmentation, skeleton, voxel_spacing)
     radius_list = radius_matrix[np.nonzero(radius_matrix)].tolist()
@@ -178,3 +181,8 @@ def extract_features(nifti_path):
         "total_volume": float(segmentation.sum() * np.prod(voxel_spacing)),
         "num_branches": len(branch_labels),
     }
+
+
+def extract_features(nifti_path):
+    segmentation, voxel_spacing = _load_seg_spacing(nifti_path)
+    return compute_features(segmentation, voxel_spacing)
