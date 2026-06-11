@@ -5,6 +5,7 @@ import pytest
 from anat2vessels.features import (
     _calc_full_path_from_points,
     _calc_shortest_path_from_points,
+    _calc_tortuosities_also_lengths,
     _extract_radius,
     _extract_skeleton,
     _get_bifurcation_endpoint_arrays,
@@ -327,3 +328,42 @@ class TestGetBranchArrayByLabel:
         labeled = np.zeros((5, 5, 5), dtype=np.int32)
         branch = _get_branch_array_by_label(labeled, 1)
         assert branch.sum() == 0
+
+
+class TestCalcTortuositiesAlsoLengths:
+    def test_straight_branch(self):
+        skel = np.zeros((7, 7, 7), dtype=np.uint8)
+        skel[3, 3, 1:6] = 1
+        labeled, names = _get_labeled_branches(skel)
+        branches = _calc_tortuosities_also_lengths(labeled, names, (1.0, 1.0, 1.0))
+        assert len(branches) == 1
+        assert branches[0]["tortuosity"] == pytest.approx(1.0)
+
+    def test_tortuous_branch(self):
+        skel = np.zeros((9, 9, 9), dtype=np.uint8)
+        skel[3, 3, 1:5] = 1
+        skel[3, 5, 5] = 1
+        labeled, names = _get_labeled_branches(skel)
+        branches = _calc_tortuosities_also_lengths(labeled, names, (1.0, 1.0, 1.0))
+        assert len(branches) >= 1
+        for b in branches:
+            assert b["tortuosity"] >= 1.0
+
+    def test_multiple_branches(self):
+        skel = np.zeros((9, 9, 9), dtype=np.uint8)
+        skel[2, 2, 1:4] = 1
+        skel[6, 6, 1:4] = 1
+        labeled, names = _get_labeled_branches(skel)
+        branches = _calc_tortuosities_also_lengths(labeled, names, (1.0, 1.0, 1.0))
+        assert len(branches) == 2
+
+    def test_empty_label_list(self):
+        labeled = np.zeros((5, 5, 5), dtype=np.int32)
+        branches = _calc_tortuosities_also_lengths(labeled, [], (1.0, 1.0, 1.0))
+        assert len(branches) == 0
+
+    def test_single_voxel_skipped(self):
+        labeled = np.zeros((5, 5, 5), dtype=np.int32)
+        labeled[2, 2, 2] = 1
+        branches = _calc_tortuosities_also_lengths(labeled, [1], (1.0, 1.0, 1.0))
+        assert len(branches) == 0
