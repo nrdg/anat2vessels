@@ -66,6 +66,13 @@ all = [
     "anat2vessels[style]",
     "anat2vessels[test]",
 ]
+docker = [
+    "pybids >= 0.17",
+]
+
+[project.scripts]
+a2v-preprocess = "anat2vessels.preprocess:run"
+a2v-features = "anat2vessels.vessels2csv:run"
 
 [project.urls]
 Homepage = "https://github.com/nrdg/anat2vessels"
