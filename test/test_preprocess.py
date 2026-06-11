@@ -267,3 +267,42 @@ class TestPreprocessImg:
         fdata = img.get_fdata()
         assert fdata.size > 0
         assert fdata.max() >= 0
+
+    def test_output_can_be_read_by_ants(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "ants_readable.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        img = ants.image_read(out_file)
+        assert img.dimension == 3
+
+    def test_output_is_not_identical_to_input(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "transformed.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        in_img = ants.image_read(t1w_path)
+        out_img = ants.image_read(out_file)
+        in_data = in_img.numpy()
+        out_data = out_img.numpy()
+        assert in_data.shape != out_data.shape or np.any(
+            in_data != out_data
+        ), "Output should differ from input after registration"
+
+    def test_output_spacing_matches_ref(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "resampled.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        ref_img = ants.image_read(avp.REF_IMG_PATH)
+        out_img = ants.image_read(out_file)
+        for i in range(3):
+            assert abs(ref_img.spacing[i] - out_img.spacing[i]) < 1e-4, (
+                f"Spacing mismatch at dim {i}: "
+                f"ref={ref_img.spacing[i]}, out={out_img.spacing[i]}"
+            )
+
+    def test_output_origin_matches_ref(self, t1w_path, tmp_path):
+        out_file = str(tmp_path / "coregistered.nii.gz")
+        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        ref_origin = ants.image_read(avp.REF_IMG_PATH).origin
+        out_origin = ants.image_read(out_file).origin
+        for i in range(3):
+            assert abs(ref_origin[i] - out_origin[i]) < 1e-4, (
+                f"Origin mismatch at dim {i}: "
+                f"ref={ref_origin[i]}, out={out_origin[i]}"
+            )
