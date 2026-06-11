@@ -2,7 +2,7 @@
 ![Anat2Vess Logo](/figures/Logo.png)
 Anat2Vess is a deep learning based tool which allows for users to extract information about brain vasculature from anatomical (T1 & T2) MRI scans. The primary use case for this tool is to add vasculature information to existing dataset in which vessel imaging was not included.
 
-For further details on training, validation and performance of our model, see our paper [here](https://www.biorxiv.org/content/10.1101/2025.05.06.652518v1).
+For further details on training, validation and performance of our model, see our preprint [here](https://www.biorxiv.org/content/10.1101/2025.05.06.652518v1).
 
 ## Step 1: Data Preprocessing
 
