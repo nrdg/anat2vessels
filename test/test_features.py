@@ -2,6 +2,7 @@ import numpy as np
 
 from anat2vessels.features import (
     _get_bifurcation_endpoint_arrays,
+    _get_labeled_branches,
     _get_num_neighbors,
 )
 
@@ -101,3 +102,39 @@ class TestGetBifurcationEndpointArrays:
         assert end.dtype == np.uint8 or end.dtype == bool
         assert set(np.unique(bif)).issubset({0, 1})
         assert set(np.unique(end)).issubset({0, 1})
+
+
+class TestGetLabeledBranches:
+    def test_single_line(self, straight_line_skeleton):
+        labeled, names = _get_labeled_branches(straight_line_skeleton)
+        assert set(np.unique(labeled)) == {0, 1}
+        assert names == [1]
+
+    def test_two_disconnected_lines(self):
+        arr = np.zeros((7, 7, 7), dtype=np.uint8)
+        arr[2, 2, 1:4] = 1
+        arr[5, 5, 1:4] = 1
+        labeled, names = _get_labeled_branches(arr)
+        assert len(names) == 2
+        assert np.count_nonzero(labeled == names[0]) >= 2
+        assert np.count_nonzero(labeled == names[1]) >= 2
+
+    def test_single_voxel_removed(self):
+        arr = np.zeros((5, 5, 5), dtype=np.uint8)
+        arr[2, 2, 2] = 1
+        labeled, names = _get_labeled_branches(arr)
+        assert len(names) == 0
+        assert labeled.sum() == 0
+
+    def test_output_has_same_shape(self, straight_line_skeleton):
+        labeled, _ = _get_labeled_branches(straight_line_skeleton)
+        assert labeled.shape == straight_line_skeleton.shape
+
+    def test_bifurcation_voxels_excluded(self, t_shape_skeleton):
+        labeled, _ = _get_labeled_branches(t_shape_skeleton)
+        bif, _ = _get_bifurcation_endpoint_arrays(t_shape_skeleton)
+        for z in range(t_shape_skeleton.shape[0]):
+            for y in range(t_shape_skeleton.shape[1]):
+                for x in range(t_shape_skeleton.shape[2]):
+                    if bif[z, y, x]:
+                        assert labeled[z, y, x] == 0
