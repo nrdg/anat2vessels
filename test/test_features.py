@@ -1,6 +1,7 @@
 import numpy as np
 
 from anat2vessels.features import (
+    _extract_radius,
     _extract_skeleton,
     _get_bifurcation_endpoint_arrays,
     _get_labeled_branches,
@@ -164,3 +165,39 @@ class TestExtractSkeleton:
         skel = _extract_skeleton(seg)
         assert skel[2, 2, 2] == 1
         assert skel.sum() == 1
+
+
+class TestExtractRadius:
+    def test_radius_positive(self):
+        seg = np.zeros((7, 7, 7), dtype=bool)
+        seg[3:5, 3:5, 2:5] = 1
+        skel = np.zeros((7, 7, 7), dtype=np.uint8)
+        skel[3, 3, 2:5] = 1
+        radii = _extract_radius(seg, skel, (1.0, 1.0, 1.0))
+        assert len(radii) > 0
+        assert (radii > 0).all()
+
+    def test_uniform_line_radius(self):
+        seg = np.zeros((7, 7, 7), dtype=bool)
+        seg[3:5, 3:5, 2:5] = 1
+        skel = np.zeros((7, 7, 7), dtype=np.uint8)
+        skel[3, 3, 2:5] = 1
+        radii = _extract_radius(seg, skel, (1.0, 1.0, 1.0))
+        expected = np.full(3, 1.0)
+        assert np.allclose(radii, expected)
+
+    def test_non_uniform_spacing_changes_radius(self):
+        seg = np.zeros((7, 7, 7), dtype=bool)
+        seg[3:5, 3:7, 2:4] = 1
+        skel = np.zeros((7, 7, 7), dtype=np.uint8)
+        skel[3, 3, 2:4] = 1
+        r_uniform = _extract_radius(seg, skel, (1.0, 1.0, 1.0))
+        r_aniso = _extract_radius(seg, skel, (1.0, 0.5, 1.0))
+        assert not np.allclose(r_uniform, r_aniso)
+
+    def test_empty_skeleton(self):
+        seg = np.zeros((7, 7, 7), dtype=bool)
+        seg[3:5, 3:5, 2:5] = 1
+        skel = np.zeros((7, 7, 7), dtype=np.uint8)
+        radii = _extract_radius(seg, skel, (1.0, 1.0, 1.0))
+        assert len(radii) == 0
