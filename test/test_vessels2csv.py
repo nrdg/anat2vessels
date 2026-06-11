@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from anat2vessels.vessels2csv import out_list_to_df
+from unittest.mock import patch
+
+from anat2vessels.vessels2csv import main, out_list_to_df
 
 
 class TestOutListToDf:
@@ -190,3 +192,106 @@ class TestOutListToDfStats:
         assert result["max_radius"].iloc[0] == 2.0
         assert result["min_radius"].iloc[0] == 1.0
         assert result["mean_radius"].iloc[1] == 3.0
+
+
+class MockArgs:
+    def __init__(
+        self, input_dir="/fake/input", output_path="/fake/output.csv", use_ray=False
+    ):
+        self.input_dir = input_dir
+        self.output_path = output_path
+        self.use_ray = use_ray
+
+
+class TestMain:
+    MOCK_FEATURES = {
+        "sub_id": "ignored",
+        "num_branches": 1,
+        "total_volume": 10.0,
+        "bifurcations": np.array([0]),
+        "endpoints": np.array([1, 1]),
+        "radius_list": [1.0],
+        "branch_list": [
+            {"full_path": 1.0, "straight_path": 1.0, "tortuosity": 1.0},
+        ],
+    }
+
+    @patch("anat2vessels.vessels2csv.out_list_to_df")
+    @patch("anat2vessels.vessels2csv.extract_features")
+    @patch("anat2vessels.vessels2csv.os.listdir")
+    def test_processes_matching_files(self, mock_listdir, mock_extract, mock_out):
+        mock_listdir.return_value = ["sub-01_seg.nii.gz", "sub-02_seg.nii.gz"]
+        mock_extract.return_value = self.MOCK_FEATURES
+        mock_out.return_value = pd.DataFrame()
+        args = MockArgs()
+        with patch.object(pd.DataFrame, "to_csv") as mock_to_csv:
+            main(args)
+        assert mock_extract.call_count == 2
+        mock_to_csv.assert_called_once_with("/fake/output.csv", index=False)
+
+    @patch("anat2vessels.vessels2csv.out_list_to_df")
+    @patch("anat2vessels.vessels2csv.extract_features")
+    @patch("anat2vessels.vessels2csv.os.listdir")
+    def test_subject_id_in_data_list(self, mock_listdir, mock_extract, mock_out):
+        mock_listdir.return_value = ["sub-01_seg.nii.gz"]
+        mock_extract.return_value = self.MOCK_FEATURES
+        mock_out.return_value = pd.DataFrame()
+        args = MockArgs()
+        with patch.object(pd.DataFrame, "to_csv"):
+            main(args)
+        mock_extract.assert_called_once_with("/fake/input/sub-01_seg.nii.gz")
+        data_list = mock_out.call_args[0][0]
+        assert data_list[0]["sub_id"] == "sub-01"
+
+    @patch("anat2vessels.vessels2csv.out_list_to_df")
+    @patch("anat2vessels.vessels2csv.extract_features")
+    @patch("anat2vessels.vessels2csv.os.listdir")
+    def test_skips_non_nifti(self, mock_listdir, mock_extract, mock_out):
+        mock_listdir.return_value = [
+            "sub-01_seg.nii.gz",
+            "readme.txt",
+            "data.csv",
+            "sub-02_seg.nii",
+        ]
+        mock_extract.return_value = self.MOCK_FEATURES
+        mock_out.return_value = pd.DataFrame()
+        args = MockArgs()
+        with patch.object(pd.DataFrame, "to_csv"):
+            main(args)
+        assert mock_extract.call_count == 1
+
+    @patch("anat2vessels.vessels2csv.out_list_to_df")
+    @patch("anat2vessels.vessels2csv.extract_features")
+    @patch("anat2vessels.vessels2csv.os.listdir")
+    def test_handles_extract_features_error(self, mock_listdir, mock_extract, mock_out):
+        mock_listdir.return_value = ["sub-01_seg.nii.gz", "sub-02_seg.nii.gz"]
+        mock_extract.side_effect = [self.MOCK_FEATURES, ValueError("corrupt")]
+        mock_out.return_value = pd.DataFrame({"sub_id": ["sub-01"]})
+        args = MockArgs()
+        with patch.object(pd.DataFrame, "to_csv"):
+            main(args)
+        data_list = mock_out.call_args[0][0]
+        assert len(data_list) == 1
+
+    @patch("anat2vessels.vessels2csv.out_list_to_df")
+    @patch("anat2vessels.vessels2csv.extract_features")
+    @patch("anat2vessels.vessels2csv.os.listdir")
+    def test_no_matching_files(self, mock_listdir, mock_extract, mock_out, capsys):
+        mock_listdir.return_value = ["readme.txt", "data.csv"]
+        args = MockArgs()
+        main(args)
+        captured = capsys.readouterr()
+        assert "No valid data was processed" in captured.out
+        mock_extract.assert_not_called()
+
+    @patch("anat2vessels.vessels2csv.out_list_to_df")
+    @patch("anat2vessels.vessels2csv.extract_features")
+    @patch("anat2vessels.vessels2csv.os.listdir")
+    def test_writes_to_correct_output_path(self, mock_listdir, mock_extract, mock_out):
+        mock_listdir.return_value = ["sub-01_seg.nii.gz"]
+        mock_extract.return_value = self.MOCK_FEATURES
+        mock_out.return_value = pd.DataFrame()
+        args = MockArgs(output_path="/custom/path/output.csv")
+        with patch.object(pd.DataFrame, "to_csv") as mock_to_csv:
+            main(args)
+        mock_to_csv.assert_called_once_with("/custom/path/output.csv", index=False)
