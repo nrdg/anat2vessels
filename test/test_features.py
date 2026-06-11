@@ -3,6 +3,8 @@ import numpy as np
 import pytest
 
 from anat2vessels.features import (
+    _calc_full_path_from_points,
+    _calc_shortest_path_from_points,
     _extract_radius,
     _extract_skeleton,
     _get_bifurcation_endpoint_arrays,
@@ -263,3 +265,45 @@ class TestGetPointsInOrder:
         points = _get_points_in_order(branch, (2.0, 3.0, 1.0))
         expected_first = np.array([4.0, 6.0, 1.0])
         assert np.allclose(points[0], expected_first)
+
+
+class TestCalcFullPathFromPoints:
+    def test_single_point(self):
+        points = np.array([[1.0, 2.0, 3.0]])
+        assert _calc_full_path_from_points(points) == 1.0
+
+    def test_two_points(self):
+        points = np.array([[0.0, 0.0, 0.0], [3.0, 4.0, 0.0]])
+        assert _calc_full_path_from_points(points) == 5.0
+
+    def test_three_collinear(self):
+        points = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 3.0], [0.0, 0.0, 5.0]])
+        assert _calc_full_path_from_points(points) == 5.0
+
+    def test_three_non_collinear(self):
+        points = np.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [3.0, 4.0, 0.0]])
+        expected = 3.0 + 4.0
+        assert _calc_full_path_from_points(points) == expected
+
+
+class TestCalcShortestPathFromPoints:
+    def test_single_point(self):
+        points = np.array([[1.0, 2.0, 3.0]])
+        assert _calc_shortest_path_from_points(points) == 1.0
+
+    def test_two_points(self):
+        points = np.array([[0.0, 0.0, 0.0], [3.0, 4.0, 0.0]])
+        assert _calc_shortest_path_from_points(points) == 5.0
+
+    def test_straight_line_matches_full(self):
+        points = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 3.0], [0.0, 0.0, 5.0]])
+        full = _calc_full_path_from_points(points)
+        shortest = _calc_shortest_path_from_points(points)
+        assert full == shortest == 5.0
+
+    def test_shortest_is_less_than_full(self):
+        points = np.array([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [3.0, 4.0, 0.0]])
+        full = _calc_full_path_from_points(points)
+        shortest = _calc_shortest_path_from_points(points)
+        assert shortest < full
+        assert shortest == 5.0
