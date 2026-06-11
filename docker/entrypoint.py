@@ -50,11 +50,13 @@ def cmd_predict(args):
         "-o",
         args.output_dir,
         "-f",
-        "0",
-        "1",
-        "2",
-        "3",
-        "4",
+    ]
+    if args.folds:
+        cmd += args.folds.split()
+    else:
+        cmd += ["0", "1", "2", "3", "4"]
+
+    cmd += [
         "-tr",
         params["trainer"],
         "-c",
@@ -126,6 +128,7 @@ def main():
     p_pred.add_argument("--output_dir", required=True)
     p_pred.add_argument("--model", choices=["t1", "t2", "t1t2"], required=True)
     p_pred.add_argument("--device", default=None)
+    p_pred.add_argument("--folds", default=None)
     p_pred.set_defaults(func=cmd_predict)
 
     p_feat = subparsers.add_parser("features", help="Extract vessel features")
