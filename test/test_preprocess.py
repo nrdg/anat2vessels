@@ -123,3 +123,22 @@ class TestSkullStrip:
         result_data = result.numpy()
         zeroed_outside = np.sum(result_data == 0) > np.sum(orig_data == 0)
         assert zeroed_outside, "Skull stripping should zero more voxels"
+
+    def test_skull_strip_t2_output_type(self, ants_t2w):
+        result = avp.skull_strip(ants_t2w, modality="t2")
+        assert hasattr(result, "shape")
+        assert result.dimension == 3
+
+    def test_skull_strip_t2_changes_image(self, ants_t2w):
+        result = avp.skull_strip(ants_t2w, modality="t2")
+        orig_data = ants_t2w.numpy()
+        result_data = result.numpy()
+        assert result_data.shape == orig_data.shape
+        assert np.any(result_data != orig_data)
+
+    def test_skull_strip_t2_reduces_intensity_outside_brain(self, ants_t2w):
+        result = avp.skull_strip(ants_t2w, modality="t2")
+        orig_data = ants_t2w.numpy()
+        result_data = result.numpy()
+        zeroed_outside = np.sum(result_data == 0) > np.sum(orig_data == 0)
+        assert zeroed_outside, "Skull stripping should zero more voxels"
