@@ -21,17 +21,17 @@ def t2w_path():
     return fetch_test_data()["t2w"]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ants_ref(ref_path):
     return ants.image_read(ref_path)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ants_t1w(t1w_path):
     return ants.image_read(t1w_path)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ants_t2w(t2w_path):
     return ants.image_read(t2w_path)
 
