@@ -1,11 +1,14 @@
 import numpy as np
 
+import pytest
+
 from anat2vessels.features import (
     _extract_radius,
     _extract_skeleton,
     _get_bifurcation_endpoint_arrays,
     _get_labeled_branches,
     _get_num_neighbors,
+    _get_points_in_order,
 )
 
 
@@ -201,3 +204,62 @@ class TestExtractRadius:
         skel = np.zeros((7, 7, 7), dtype=np.uint8)
         radii = _extract_radius(seg, skel, (1.0, 1.0, 1.0))
         assert len(radii) == 0
+
+
+class TestGetPointsInOrder:
+    def test_three_voxel_line(self):
+        branch = np.zeros((5, 5, 5), dtype=np.int8)
+        branch[2, 2, 1:4] = 1
+        points = _get_points_in_order(branch, (1.0, 1.0, 1.0))
+        assert len(points) == 3
+
+    def test_two_voxel_line(self):
+        branch = np.zeros((5, 5, 5), dtype=np.int8)
+        branch[2, 2, 1:3] = 1
+        points = _get_points_in_order(branch, (1.0, 1.0, 1.0))
+        assert len(points) == 2
+
+    def test_first_point_is_endpoint(self):
+        branch = np.zeros((5, 5, 5), dtype=np.int8)
+        branch[2, 2, 1:4] = 1
+        points = _get_points_in_order(branch, (1.0, 1.0, 1.0))
+        first = tuple(points[0].astype(int))
+        _, endpoints = _get_bifurcation_endpoint_arrays(branch.astype(np.uint8))
+        assert endpoints[first] == 1
+
+    def test_last_point_is_endpoint(self):
+        branch = np.zeros((5, 5, 5), dtype=np.int8)
+        branch[2, 2, 1:4] = 1
+        points = _get_points_in_order(branch, (1.0, 1.0, 1.0))
+        last = tuple(points[-1].astype(int))
+        _, endpoints = _get_bifurcation_endpoint_arrays(branch.astype(np.uint8))
+        assert endpoints[last] == 1
+
+    def test_single_voxel_returns_empty(self):
+        branch = np.zeros((5, 5, 5), dtype=np.int8)
+        branch[2, 2, 2] = 1
+        points = _get_points_in_order(branch, (1.0, 1.0, 1.0))
+        assert len(points) == 0
+
+    def test_no_endpoints_returns_empty(self):
+        branch = np.zeros((5, 5, 5), dtype=np.int8)
+        branch[2, 2, 2] = 1
+        branch[2, 3, 2] = 1
+        branch[3, 3, 2] = 1
+        branch[3, 2, 2] = 1
+        points = _get_points_in_order(branch, (1.0, 1.0, 1.0))
+        assert len(points) == 0
+
+    def test_disconnected_raises(self):
+        branch = np.zeros((7, 7, 7), dtype=np.int8)
+        branch[2, 2, 1:4] = 1
+        branch[5, 5, 1:4] = 1
+        with pytest.raises(ValueError, match="Invalid path"):
+            _get_points_in_order(branch, (1.0, 1.0, 1.0))
+
+    def test_non_uniform_spacing(self):
+        branch = np.zeros((5, 5, 5), dtype=np.int8)
+        branch[2, 2, 1:4] = 1
+        points = _get_points_in_order(branch, (2.0, 3.0, 1.0))
+        expected_first = np.array([4.0, 6.0, 1.0])
+        assert np.allclose(points[0], expected_first)
