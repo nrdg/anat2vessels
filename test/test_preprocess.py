@@ -151,3 +151,34 @@ class TestSkullStrip:
     def test_skull_strip_empty_modality_raises(self, ants_t1w):
         with pytest.raises(Exception):
             avp.skull_strip(ants_t1w, modality="")
+
+    def test_skull_strip_output_mask_is_binary(self, ants_t1w):
+        result = avp.skull_strip(ants_t1w, modality="t1")
+        result_data = result.numpy()
+        assert result_data.dtype == np.float64 or result_data.dtype == np.float32
+
+    def test_skull_strip_preserves_origin(self, ants_t1w):
+        result = avp.skull_strip(ants_t1w, modality="t1")
+        orig_origin = ants_t1w.origin
+        res_origin = result.origin
+        for o, r in zip(orig_origin, res_origin):
+            assert abs(o - r) < 1e-6
+
+    def test_skull_strip_preserves_spacing(self, ants_t1w):
+        result = avp.skull_strip(ants_t1w, modality="t1")
+        orig_spacing = ants_t1w.spacing
+        res_spacing = result.spacing
+        for o, r in zip(orig_spacing, res_spacing):
+            assert abs(o - r) < 1e-6
+
+    def test_skull_strip_t1_mask_has_brain_voxels(self, ants_t1w):
+        result = avp.skull_strip(ants_t1w, modality="t1")
+        result_data = result.numpy()
+        non_zero_fraction = np.count_nonzero(result_data) / result_data.size
+        assert non_zero_fraction > 0.1, "Brain should occupy >10% of volume"
+
+    def test_skull_strip_t2_mask_has_brain_voxels(self, ants_t2w):
+        result = avp.skull_strip(ants_t2w, modality="t2")
+        result_data = result.numpy()
+        non_zero_fraction = np.count_nonzero(result_data) / result_data.size
+        assert non_zero_fraction > 0.1, "Brain should occupy >10% of volume"
