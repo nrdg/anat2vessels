@@ -75,3 +75,49 @@ class TestOutListToDf:
         tort_list = result["tortuosity_list"].iloc[0]
         assert isinstance(tort_list, list)
         assert tort_list == [1.25, 1.25]
+
+
+class TestOutListToDfEdgeCases:
+    def test_empty_input_list_returns_empty_dataframe(self):
+        result = out_list_to_df([])
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 0
+
+    def test_empty_radius_list_defaults_zero(self, subject_empty_radius):
+        result = out_list_to_df([subject_empty_radius])
+        assert result["mean_radius"].iloc[0] == 0.0
+        assert result["max_radius"].iloc[0] == 0.0
+        assert result["min_radius"].iloc[0] == 0.0
+
+    def test_empty_branch_list_skipped(self, subject_empty_branches):
+        result = out_list_to_df([subject_empty_branches])
+        assert len(result) == 0
+
+    def test_malformed_subject_skipped(self, subject_malformed_features):
+        result = out_list_to_df([subject_malformed_features])
+        assert len(result) == 0
+
+    def test_mixed_valid_and_malformed(
+        self, single_subject_features, subject_malformed_features
+    ):
+        result = out_list_to_df(
+            [
+                single_subject_features,
+                subject_malformed_features,
+                single_subject_features,
+            ]
+        )
+        assert len(result) == 2
+        assert list(result["sub_id"]) == ["sub-01", "sub-01"]
+
+    def test_empty_branch_list_alongside_valid(
+        self, single_subject_features, subject_empty_branches
+    ):
+        result = out_list_to_df(
+            [
+                single_subject_features,
+                subject_empty_branches,
+            ]
+        )
+        assert len(result) == 1
+        assert result["sub_id"].iloc[0] == "sub-01"
