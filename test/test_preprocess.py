@@ -245,3 +245,25 @@ class TestPreprocessImg:
         zeros_fraction_no_ss = np.count_nonzero(img_no_ss == 0) / img_no_ss.size
         zeros_fraction_with_ss = np.count_nonzero(img_with_ss == 0) / img_with_ss.size
         assert zeros_fraction_with_ss > zeros_fraction_no_ss
+
+    def test_t2_modality_no_skullstrip(self, t2w_path, tmp_path):
+        out_file = str(tmp_path / "t2_preprocessed.nii.gz")
+        avp.preprocess_img(t2w_path, out_file, modality="t2", skull_strip=False)
+        assert os.path.exists(out_file)
+        img = nib.load(out_file)
+        assert len(img.shape) == 3
+
+    def test_t2_modality_with_skullstrip(self, t2w_path, tmp_path):
+        out_file = str(tmp_path / "t2_skullstripped.nii.gz")
+        avp.preprocess_img(t2w_path, out_file, modality="t2", skull_strip=True)
+        assert os.path.exists(out_file)
+        img = nib.load(out_file)
+        assert len(img.shape) == 3
+
+    def test_t2_modality_output_valid(self, t2w_path, tmp_path):
+        out_file = str(tmp_path / "t2_output.nii.gz")
+        avp.preprocess_img(t2w_path, out_file, modality="t2", skull_strip=False)
+        img = nib.load(out_file)
+        fdata = img.get_fdata()
+        assert fdata.size > 0
+        assert fdata.max() >= 0
