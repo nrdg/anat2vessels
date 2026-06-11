@@ -187,49 +187,47 @@ class TestSkullStrip:
 class TestPreprocessImg:
     def test_no_skullstrip_output_created(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "preprocessed.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
         assert os.path.exists(out_file)
 
     def test_no_skullstrip_output_valid_nifti(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "preprocessed.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
         img = nib.load(out_file)
         assert len(img.shape) == 3
 
     def test_no_skullstrip_output_has_content(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "preprocessed.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
         img = nib.load(out_file)
         fdata = img.get_fdata()
         assert fdata.size > 0
         assert fdata.max() >= 0
 
-    def test_no_skullstrip_output_shape_matches_ref(self, t1w_path, tmp_path):
+    def test_no_skullstrip_output_spacing_matches_ref(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "preprocessed.nii.gz")
-        ref_img = nib.load(avp.REF_IMG_PATH)
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
-        out_img = nib.load(out_file)
-        ref_shape = ref_img.shape
-        out_shape = out_img.shape
-        n_dims_equal = sum(1 for i in range(3) if abs(ref_shape[i] - out_shape[i]) <= 1)
-        assert (
-            n_dims_equal >= 2
-        ), f"Output shape {out_shape} should match ref {ref_shape}"
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
+        ref_img = ants.image_read(avp.REF_IMG_PATH)
+        out_img = ants.image_read(out_file)
+        for i in range(3):
+            assert (
+                abs(ref_img.spacing[i] - out_img.spacing[i]) < 1e-4
+            ), f"Spacing mismatch at dim {i}"
 
     def test_with_skullstrip_output_created(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "skullstripped_preprocessed.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=True)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=True)
         assert os.path.exists(out_file)
 
     def test_with_skullstrip_output_valid_nifti(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "skullstripped_preprocessed.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=True)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=True)
         img = nib.load(out_file)
         assert len(img.shape) == 3
 
     def test_with_skullstrip_output_has_content(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "skullstripped_preprocessed.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=True)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=True)
         img = nib.load(out_file)
         fdata = img.get_fdata()
         assert fdata.size > 0
@@ -238,8 +236,8 @@ class TestPreprocessImg:
     def test_with_skullstrip_more_zeros_than_without(self, t1w_path, tmp_path):
         out_no_ss = str(tmp_path / "no_ss.nii.gz")
         out_with_ss = str(tmp_path / "with_ss.nii.gz")
-        avp.preprocess_img(t1w_path, out_no_ss, modality="t1", skull_strip=False)
-        avp.preprocess_img(t1w_path, out_with_ss, modality="t1", skull_strip=True)
+        avp.preprocess_img(t1w_path, out_no_ss, modality="t1", do_skull_strip=False)
+        avp.preprocess_img(t1w_path, out_with_ss, modality="t1", do_skull_strip=True)
         img_no_ss = nib.load(out_no_ss).get_fdata()
         img_with_ss = nib.load(out_with_ss).get_fdata()
         zeros_fraction_no_ss = np.count_nonzero(img_no_ss == 0) / img_no_ss.size
@@ -248,21 +246,21 @@ class TestPreprocessImg:
 
     def test_t2_modality_no_skullstrip(self, t2w_path, tmp_path):
         out_file = str(tmp_path / "t2_preprocessed.nii.gz")
-        avp.preprocess_img(t2w_path, out_file, modality="t2", skull_strip=False)
+        avp.preprocess_img(t2w_path, out_file, modality="t2", do_skull_strip=False)
         assert os.path.exists(out_file)
         img = nib.load(out_file)
         assert len(img.shape) == 3
 
     def test_t2_modality_with_skullstrip(self, t2w_path, tmp_path):
         out_file = str(tmp_path / "t2_skullstripped.nii.gz")
-        avp.preprocess_img(t2w_path, out_file, modality="t2", skull_strip=True)
+        avp.preprocess_img(t2w_path, out_file, modality="t2", do_skull_strip=True)
         assert os.path.exists(out_file)
         img = nib.load(out_file)
         assert len(img.shape) == 3
 
     def test_t2_modality_output_valid(self, t2w_path, tmp_path):
         out_file = str(tmp_path / "t2_output.nii.gz")
-        avp.preprocess_img(t2w_path, out_file, modality="t2", skull_strip=False)
+        avp.preprocess_img(t2w_path, out_file, modality="t2", do_skull_strip=False)
         img = nib.load(out_file)
         fdata = img.get_fdata()
         assert fdata.size > 0
@@ -270,13 +268,13 @@ class TestPreprocessImg:
 
     def test_output_can_be_read_by_ants(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "ants_readable.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
         img = ants.image_read(out_file)
         assert img.dimension == 3
 
     def test_output_is_not_identical_to_input(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "transformed.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
         in_img = ants.image_read(t1w_path)
         out_img = ants.image_read(out_file)
         in_data = in_img.numpy()
@@ -287,7 +285,7 @@ class TestPreprocessImg:
 
     def test_output_spacing_matches_ref(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "resampled.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
         ref_img = ants.image_read(avp.REF_IMG_PATH)
         out_img = ants.image_read(out_file)
         for i in range(3):
@@ -298,7 +296,7 @@ class TestPreprocessImg:
 
     def test_output_origin_matches_ref(self, t1w_path, tmp_path):
         out_file = str(tmp_path / "coregistered.nii.gz")
-        avp.preprocess_img(t1w_path, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_path, out_file, modality="t1", do_skull_strip=False)
         ref_origin = ants.image_read(avp.REF_IMG_PATH).origin
         out_origin = ants.image_read(out_file).origin
         for i in range(3):
@@ -309,7 +307,9 @@ class TestPreprocessImg:
 
     def test_identity_registration_ref_to_self(self, tmp_path):
         out_file = str(tmp_path / "identity.nii.gz")
-        avp.preprocess_img(avp.REF_IMG_PATH, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(
+            avp.REF_IMG_PATH, out_file, modality="t1", do_skull_strip=False
+        )
         assert os.path.exists(out_file)
         ref_data = ants.image_read(avp.REF_IMG_PATH).numpy()
         out_data = ants.image_read(out_file).numpy()
@@ -322,7 +322,7 @@ class TestPreprocessImg:
         t1w_ref = str(tmp_path / "t1w_copy.nii.gz")
         img = ants.image_read(t1w_path)
         ants.image_write(img, t1w_ref)
-        avp.preprocess_img(t1w_ref, out_file, modality="t1", skull_strip=False)
+        avp.preprocess_img(t1w_ref, out_file, modality="t1", do_skull_strip=False)
         out_data = ants.image_read(out_file).numpy()
         ref_img = ants.image_read(avp.REF_IMG_PATH).numpy()
         ratio = min(out_data.size, ref_img.size) / max(out_data.size, ref_img.size)
@@ -337,7 +337,7 @@ class TestPreprocessImg:
                 "/nonexistent/path/input.nii.gz",
                 out_file,
                 modality="t1",
-                skull_strip=False,
+                do_skull_strip=False,
             )
 
     def test_invalid_modality_raises(self, t1w_path, tmp_path):
@@ -347,7 +347,7 @@ class TestPreprocessImg:
                 t1w_path,
                 out_file,
                 modality="invalid",
-                skull_strip=False,
+                do_skull_strip=False,
             )
 
     def test_empty_modality_raises(self, t1w_path, tmp_path):
@@ -357,7 +357,7 @@ class TestPreprocessImg:
                 t1w_path,
                 out_file,
                 modality="",
-                skull_strip=False,
+                do_skull_strip=False,
             )
 
     def test_nonexistent_outdir_raises(self, t1w_path):
@@ -367,5 +367,5 @@ class TestPreprocessImg:
                 t1w_path,
                 bad_out,
                 modality="t1",
-                skull_strip=False,
+                do_skull_strip=False,
             )
