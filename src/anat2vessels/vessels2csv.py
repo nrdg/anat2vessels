@@ -3,13 +3,9 @@ import argparse
 from anat2vessels.features import extract_features
 import pandas as pd
 import numpy as np
+import ray
 from tqdm import tqdm
 from multiprocessing import cpu_count
-
-try:
-    import ray
-except ImportError:
-    ray = None
 
 
 def main(args):
@@ -152,7 +148,7 @@ if __name__ == "__main__":
 
     args = args.parse_args()
 
-    if ray is not None and args.use_ray:
+    if args.use_ray:
         ray_main(args)
     else:
         main(args)
