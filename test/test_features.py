@@ -14,7 +14,7 @@ from anat2vessels.features import (
     _get_labeled_branches,
     _get_num_neighbors,
     _get_points_in_order,
-    _get_skel_seg_spacing,
+    _load_seg_spacing,
     compute_features,
     extract_features,
 )
@@ -385,21 +385,22 @@ class TestGetSkelSegSpacing:
         data = np.zeros((10, 10, 10), dtype=np.uint8)
         data[5, 5, 2:8] = 1
         nii_path = self._make_nifti(data, (1.5, 1.0, 2.0), tmp_path)
-        skeleton, seg, spacing = _get_skel_seg_spacing(nii_path)
+        _, spacing = _load_seg_spacing(nii_path)
         assert spacing == (1.5, 1.0, 2.0)
 
     def test_segmentation_is_bool(self, tmp_path):
         data = np.zeros((10, 10, 10), dtype=np.uint8)
         data[5, 5, 2:8] = 1
         nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
-        _, seg, _ = _get_skel_seg_spacing(nii_path)
+        seg, _ = _load_seg_spacing(nii_path)
         assert seg.dtype == bool
 
     def test_skeleton_is_binary(self, tmp_path):
         data = np.zeros((10, 10, 10), dtype=np.uint8)
         data[5, 5, 2:8] = 1
         nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
-        skeleton, _, _ = _get_skel_seg_spacing(nii_path)
+        seg, _ = _load_seg_spacing(nii_path)
+        skeleton = _extract_skeleton(seg)
         assert skeleton.dtype == np.uint8
         assert set(np.unique(skeleton)).issubset({0, 1})
 
@@ -407,7 +408,8 @@ class TestGetSkelSegSpacing:
         data = np.zeros((10, 10, 10), dtype=np.uint8)
         data[5, 5, 2:8] = 1
         nii_path = self._make_nifti(data, (1.0, 1.0, 1.0), tmp_path)
-        skeleton, seg, _ = _get_skel_seg_spacing(nii_path)
+        seg, _ = _load_seg_spacing(nii_path)
+        skeleton = _extract_skeleton(seg)
         assert skeleton.sum() <= seg.sum()
 
 
