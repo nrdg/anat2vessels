@@ -1,6 +1,7 @@
 import os
 
 import ants
+import numpy as np
 import pytest
 
 from anat2vessels.data.fetch import fetch_ref_img, fetch_test_data
@@ -64,3 +65,25 @@ def small_t2w_path(t2w_path, tmp_path_factory):
 def small_ref_path(ref_path, tmp_path_factory):
     cache_dir = str(tmp_path_factory.mktemp("small"))
     return _make_small_image(ref_path, cache_dir)
+
+
+# ---------------------------------------------------------------------------
+# Features test fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def straight_line_skeleton():
+    """A 5-voxel straight line along z at (3,3,1:6) in a 7x7x7 array."""
+    arr = np.zeros((7, 7, 7), dtype=np.uint8)
+    arr[3, 3, 1:6] = 1
+    return arr
+
+
+@pytest.fixture(scope="session")
+def t_shape_skeleton():
+    """A T-junction: vertical 3 voxels + horizontal 5 voxels at intersection."""
+    arr = np.zeros((9, 9, 9), dtype=np.uint8)
+    arr[4, 4, 2:5] = 1
+    arr[4, 2:7, 4] = 1
+    return arr
