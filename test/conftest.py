@@ -87,3 +87,112 @@ def t_shape_skeleton():
     arr[4, 4, 2:5] = 1
     arr[4, 2:7, 4] = 1
     return arr
+
+
+# ---------------------------------------------------------------------------
+# vessels2csv test fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def single_subject_features():
+    """A mock feature dict for a single subject with two branches."""
+    return {
+        "sub_id": "sub-01",
+        "num_branches": 2,
+        "total_volume": 100.0,
+        "bifurcations": np.array([0, 1, 0, 1, 0]),
+        "endpoints": np.array([1, 0, 1, 0, 1]),
+        "radius_list": [1.5, 2.0, 2.5],
+        "branch_list": [
+            {
+                "full_path": 10.0,
+                "straight_path": 8.0,
+                "tortuosity": 1.25,
+            },
+            {
+                "full_path": 15.0,
+                "straight_path": 12.0,
+                "tortuosity": 1.25,
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def multi_subject_features():
+    """A list of mock feature dicts for three subjects."""
+    return [
+        {
+            "sub_id": "sub-01",
+            "num_branches": 2,
+            "total_volume": 100.0,
+            "bifurcations": np.array([0, 1, 0, 1, 0]),
+            "endpoints": np.array([1, 0, 1, 0, 1]),
+            "radius_list": [1.0, 2.0],
+            "branch_list": [
+                {"full_path": 5.0, "straight_path": 4.0, "tortuosity": 1.25},
+                {"full_path": 10.0, "straight_path": 8.0, "tortuosity": 1.25},
+            ],
+        },
+        {
+            "sub_id": "sub-02",
+            "num_branches": 1,
+            "total_volume": 50.0,
+            "bifurcations": np.array([0, 0, 0]),
+            "endpoints": np.array([1, 0, 1]),
+            "radius_list": [3.0],
+            "branch_list": [
+                {"full_path": 7.0, "straight_path": 7.0, "tortuosity": 1.0},
+            ],
+        },
+        {
+            "sub_id": "sub-03",
+            "num_branches": 0,
+            "total_volume": 0.0,
+            "bifurcations": np.array([0, 0, 0]),
+            "endpoints": np.array([0, 0, 0]),
+            "radius_list": [],
+            "branch_list": [],
+        },
+    ]
+
+
+@pytest.fixture
+def subject_empty_radius():
+    """A subject with an empty radius list."""
+    return {
+        "sub_id": "sub-empty-radius",
+        "num_branches": 1,
+        "total_volume": 10.0,
+        "bifurcations": np.array([0, 0]),
+        "endpoints": np.array([1, 1]),
+        "radius_list": [],
+        "branch_list": [
+            {"full_path": 3.0, "straight_path": 3.0, "tortuosity": 1.0},
+        ],
+    }
+
+
+@pytest.fixture
+def subject_empty_branches():
+    """A subject with an empty branch list."""
+    return {
+        "sub_id": "sub-empty-branches",
+        "num_branches": 0,
+        "total_volume": 0.0,
+        "bifurcations": np.array([0, 0]),
+        "endpoints": np.array([0, 0]),
+        "radius_list": [],
+        "branch_list": [],
+    }
+
+
+@pytest.fixture
+def subject_malformed_features():
+    """A malformed feature dict missing required keys."""
+    return {
+        "sub_id": "sub-bad",
+        "num_branches": 1,
+        # missing total_volume, bifurcations, endpoints, radius_list, branch_list
+    }
