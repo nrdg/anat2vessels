@@ -1,5 +1,3 @@
-import pooch
-
 import ants
 
 try:
@@ -11,12 +9,22 @@ try:
 except ImportError:
     antspynet = None
 
-REF_IMG_PATH = pooch.retrieve(
-    url="https://huggingface.co/huggingbrain/AnatomicalVesselSeg/resolve/main/ref.nii.gz",
-    known_hash="sha256:a73a27eb80db1bdd36e33adb843da21e5df145402c773695193c56ade1fa30b0",
-    path=pooch.os_cache("anat2vessels"),
-    fname="ref.nii.gz",
-)
+_REF_IMG_PATH = None
+
+
+def _get_ref_path():
+    global _REF_IMG_PATH
+    if _REF_IMG_PATH is None:
+        from anat2vessels.data.fetch import fetch_ref_img
+
+        _REF_IMG_PATH = fetch_ref_img()
+    return _REF_IMG_PATH
+
+
+def __getattr__(name):
+    if name == "REF_IMG_PATH":
+        return _get_ref_path()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def skull_strip(img, modality="t1"):
@@ -63,7 +71,9 @@ def preprocess_img(
         Path to reference image. Default: REF_IMG_PATH.
     """
     img = ants.image_read(in_file)
-    ref_img = ants.image_read(ref_path or REF_IMG_PATH)
+    if ref_path is None:
+        ref_path = _get_ref_path()
+    ref_img = ants.image_read(ref_path)
 
     if do_skull_strip:
         img = skull_strip(img, modality=modality)

@@ -10,6 +10,7 @@ REGISTRY = pooch.create(
         "sub-01_ses-forrestgump_T1w.nii.gz": "sha256:7c702aee386767418cc1a914fb8957c75ff2844e1d72de2c2d4b85cbac88f0cf",
         "sub-01_ses-forrestgump_T2w.nii.gz": "sha256:652248cb57ccbca27778660960b005e9206a9281811ea8480cae6fb3eb2652d2",
     },
+    retry_if_failed=5,
 )
 
 
