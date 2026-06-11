@@ -1,6 +1,6 @@
-import os.path as op
+import pooch
+
 import ants
-import anat2vessels.data as avd
 
 try:
     import ray
@@ -11,7 +11,12 @@ try:
 except ImportError:
     antspynet = None
 
-REF_IMG_PATH = op.join(op.split(avd.__file__)[0], "ref.nii.gz")
+REF_IMG_PATH = pooch.retrieve(
+    url="https://huggingface.co/huggingbrain/AnatomicalVesselSeg/resolve/main/ref.nii.gz",
+    known_hash="sha256:a73a27eb80db1bdd36e33adb843da21e5df145402c773695193c56ade1fa30b0",
+    path=pooch.os_cache("anat2vessels"),
+    fname="ref.nii.gz",
+)
 
 
 def skull_strip(img, modality="t1"):
