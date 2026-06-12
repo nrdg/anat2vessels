@@ -1,8 +1,9 @@
 import numpy as np
+import nibabel as nib
 import pandas as pd
 import pytest
 
-from anat2vessels.vessels2csv import out_list_to_df
+from anat2vessels.vessels2csv import main, out_list_to_df
 
 
 class TestOutListToDf:
@@ -196,3 +197,67 @@ class MockArgs:
     def __init__(self, input_dir="/fake/input", output_path="/fake/output.csv"):
         self.input_dir = input_dir
         self.output_path = output_path
+
+
+def _make_nifti(data, spacing, path):
+    img = nib.Nifti1Image(data, np.eye(4))
+    img.header.set_zooms(spacing)
+    nib.save(img, str(path))
+
+
+class TestMain:
+    SPACING = (1.0, 1.0, 1.0)
+
+    def _vessel_seg(self, shape=(10, 10, 10)):
+        data = np.zeros(shape, dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        return data
+
+    def test_processes_matching_files(self, tmp_path):
+        for sub in ("sub-01", "sub-02"):
+            nii_path = tmp_path / f"{sub}_seg.nii.gz"
+            _make_nifti(self._vessel_seg(), self.SPACING, nii_path)
+        output_path = tmp_path / "output.csv"
+        main(MockArgs(input_dir=str(tmp_path), output_path=str(output_path)))
+        assert output_path.exists()
+        df = pd.read_csv(str(output_path))
+        assert len(df) == 2
+        assert set(df["sub_id"]) == {"sub-01", "sub-02"}
+        expected_cols = {
+            "sub_id",
+            "num_branches",
+            "total_volume",
+            "bifurcations",
+            "endpoints",
+            "radius_list",
+            "mean_radius",
+            "max_radius",
+            "min_radius",
+            "mean_tortuosity",
+            "max_tortuosity",
+            "min_tortuosity",
+            "tortuosity_list",
+            "branch_list",
+            "total_branch_length",
+            "mean_branch_length",
+            "max_branch_length",
+        }
+        assert set(df.columns) == expected_cols
+
+    def test_subject_id_from_filename(self, tmp_path):
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-42_seg.nii.gz")
+        output_path = tmp_path / "output.csv"
+        main(MockArgs(input_dir=str(tmp_path), output_path=str(output_path)))
+        df = pd.read_csv(str(output_path))
+        assert df["sub_id"].iloc[0] == "sub-42"
+
+    def test_skips_non_nifti(self, tmp_path):
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-01_seg.nii.gz")
+        # .nii files are listed but not processed by main()
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-02_seg.nii")
+        (tmp_path / "readme.txt").write_text("not an image")
+        output_path = tmp_path / "output.csv"
+        main(MockArgs(input_dir=str(tmp_path), output_path=str(output_path)))
+        df = pd.read_csv(str(output_path))
+        assert len(df) == 1
+        assert df["sub_id"].iloc[0] == "sub-01"
