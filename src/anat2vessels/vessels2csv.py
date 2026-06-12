@@ -9,6 +9,13 @@ from multiprocessing import cpu_count
 
 
 def main(args):
+    """Serial feature extraction over all NIfTI files in a directory.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Must have ``input_dir`` and ``output_path`` attributes.
+    """
     data_list = []
     files = os.listdir(args.input_dir)
     files = [f for f in files if f.endswith(".nii.gz") or f.endswith(".nii")]
@@ -36,6 +43,13 @@ def main(args):
 
 
 def ray_main(args):
+    """Parallel feature extraction over all NIfTI files using Ray.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Must have ``input_dir`` and ``output_path`` attributes.
+    """
     ray.init(num_cpus=(cpu_count() - 1))
     data_list = []
 
@@ -71,6 +85,23 @@ def ray_main(args):
 
 
 def out_list_to_df(out_list):
+    """Convert a list of feature dictionaries to a flat DataFrame.
+
+    Each dict is flattened into a single row with columns for subject ID,
+    branch count, volume, bifurcations, endpoints, radius statistics,
+    tortuosity statistics, and branch length statistics.
+
+    Parameters
+    ----------
+    out_list : list of dict
+        List of feature dicts as returned by :func:`extract_features`,
+        each augmented with a ``sub_id`` key.
+
+    Returns
+    -------
+    pd.DataFrame
+        Flattened DataFrame. Returns an empty DataFrame if no valid data.
+    """
     df_list = []
     for item in out_list:
         try:
@@ -141,6 +172,19 @@ def out_list_to_df(out_list):
 
 
 def run_feature_extraction(input_dir, output_path, use_ray=True):
+    """Programmatic entry point for vessel feature extraction.
+
+    Selects serial (:func:`main`) or Ray-parallel (:func:`ray_main`) mode.
+
+    Parameters
+    ----------
+    input_dir : str
+        Directory containing NIfTI segmentation files.
+    output_path : str
+        Path for the output CSV file.
+    use_ray : bool, optional
+        Enable parallel processing with Ray.
+    """
     args = argparse.Namespace(
         input_dir=input_dir,
         output_path=output_path,
@@ -153,6 +197,10 @@ def run_feature_extraction(input_dir, output_path, use_ray=True):
 
 
 def run():
+    """CLI entry point for ``a2v-features``.
+
+    Parses command-line arguments and calls :func:`run_feature_extraction`.
+    """
     parser = argparse.ArgumentParser(
         description="Extract vessel features from predictions"
     )

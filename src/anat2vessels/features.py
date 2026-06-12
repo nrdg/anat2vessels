@@ -6,6 +6,20 @@ from tqdm import tqdm
 
 
 def _load_seg_spacing(nifti_path):
+    """Load a binary segmentation and its voxel spacing from a NIfTI file.
+
+    Parameters
+    ----------
+    nifti_path : str
+        Path to a NIfTI file containing a binary vessel segmentation.
+
+    Returns
+    -------
+    segmentation : np.ndarray
+        Boolean array of the segmentation.
+    voxel_spacing : tuple of float
+        Voxel dimensions (mm) along each axis.
+    """
     img = nib.load(nifti_path)
     voxel_spacing = img.header.get_zooms()[:3]
     segmentation = img.get_fdata().astype(bool)
@@ -13,6 +27,22 @@ def _load_seg_spacing(nifti_path):
 
 
 def _get_bifurcation_endpoint_arrays(skeleton):
+    """Identify bifurcation and endpoint voxels in a skeleton.
+
+    Bifurcations have >2 neighbors; endpoints have exactly 1 neighbor.
+
+    Parameters
+    ----------
+    skeleton : np.ndarray
+        Binary skeleton array.
+
+    Returns
+    -------
+    bifurcations : np.ndarray
+        Binary array marking bifurcation voxels.
+    endpoints : np.ndarray
+        Binary array marking endpoint voxels.
+    """
     num_neighbors = _get_num_neighbors(skeleton)
 
     bifurcations = num_neighbors > 2
@@ -25,6 +55,23 @@ def _get_bifurcation_endpoint_arrays(skeleton):
 
 
 def _get_labeled_branches(skeleton):
+    """Label connected branch segments after removing bifurcation voxels.
+
+    Bifurcation voxels are zeroed so each connected component is a single
+    unbranched vessel segment. Segments with fewer than 2 voxels are discarded.
+
+    Parameters
+    ----------
+    skeleton : np.ndarray
+        Binary skeleton array.
+
+    Returns
+    -------
+    labeled_branches : np.ndarray
+        Integer array where each branch has a unique label.
+    branch_names : list of int
+        Valid branch labels (segments with >=2 voxels).
+    """
     neighbor_count = _get_num_neighbors(skeleton)
     skeleton = skeleton.astype(np.uint8, copy=True)
 
@@ -44,6 +91,22 @@ def _get_labeled_branches(skeleton):
 
 
 def _extract_radius(segmentation, centerlines, voxel_spacing):
+    """Extract vessel radii at centerline voxels using a distance transform.
+
+    Parameters
+    ----------
+    segmentation : np.ndarray
+        Binary vessel segmentation.
+    centerlines : np.ndarray
+        Binary skeleton (centerlines) of the segmentation.
+    voxel_spacing : tuple of float
+        Voxel dimensions (mm).
+
+    Returns
+    -------
+    radius_matrix : np.ndarray
+        Radius values at centerline voxels (zeros elsewhere).
+    """
     image = segmentation
     skeleton = centerlines
     transf = ndi.distance_transform_edt(
@@ -55,12 +118,36 @@ def _extract_radius(segmentation, centerlines, voxel_spacing):
 
 
 def _extract_skeleton(segmentation):
+    """Skeletonize a binary segmentation using the Lee method.
+
+    Parameters
+    ----------
+    segmentation : np.ndarray
+        Binary segmentation array.
+
+    Returns
+    -------
+    skeleton : np.ndarray
+        Binary skeleton (uint8).
+    """
     image = segmentation
     skeleton = skeletonize(image, method="lee")
     return skeleton.astype(np.uint8, copy=False)
 
 
 def _get_num_neighbors(skeleton):
+    """Count the number of 26-connected neighbors for each foreground voxel.
+
+    Parameters
+    ----------
+    skeleton : np.ndarray
+        Binary skeleton array.
+
+    Returns
+    -------
+    num_neighbors : np.ndarray
+        Integer array of neighbor counts (same shape as input).
+    """
     kernel = np.ones((3, 3, 3), dtype=np.uint8)
     kernel[1, 1, 1] = 0
     num_neighbors = ndi.convolve(skeleton, kernel, mode="constant", cval=0)
@@ -68,6 +155,22 @@ def _get_num_neighbors(skeleton):
 
 
 def _calc_tortuosities_also_lengths(labeled_branches, branch_labels, vox_spacing):
+    """Compute tortuosity, full path, and straight-line length per branch.
+
+    Parameters
+    ----------
+    labeled_branches : np.ndarray
+        Integer array of labeled branches.
+    branch_labels : list of int
+        Branch labels to process.
+    vox_spacing : tuple of float
+        Voxel dimensions (mm).
+
+    Returns
+    -------
+    branches : list of dict
+        Each dict has keys ``tortuosity``, ``full_path``, ``straight_path``.
+    """
     branches = []
     for i in tqdm(branch_labels):
         branch = (labeled_branches == i).astype(np.int8)
@@ -100,10 +203,43 @@ def _calc_tortuosities_also_lengths(labeled_branches, branch_labels, vox_spacing
 
 
 def _get_branch_array_by_label(labeled_branches, branch_label):
+    """Extract a single branch as a binary array.
+
+    Parameters
+    ----------
+    labeled_branches : np.ndarray
+        Integer array of labeled branches.
+    branch_label : int
+        Label of the branch to extract.
+
+    Returns
+    -------
+    branch_array : np.ndarray
+        Binary array (int8) with ones at the target branch.
+    """
     return (labeled_branches == branch_label).astype(np.int8)
 
 
 def _get_points_in_order(branch, vox_spacing):
+    """Walk along a branch from one endpoint to the other, returning ordered points.
+
+    Parameters
+    ----------
+    branch : np.ndarray
+        Binary array of a single branch.
+    vox_spacing : tuple of float
+        Voxel dimensions (mm).
+
+    Returns
+    -------
+    points : np.ndarray
+        (N, 3) array of ordered point coordinates in physical space (mm).
+
+    Raises
+    ------
+    ValueError
+        If the branch skeleton is disconnected.
+    """
     path_cords = np.argwhere(branch == 1)
     endpoints = np.argwhere(_get_bifurcation_endpoint_arrays(branch)[1] == 1)
 
@@ -140,6 +276,19 @@ def _get_points_in_order(branch, vox_spacing):
 
 
 def _calc_full_path_from_points(points):
+    """Compute the cumulative path length along a sequence of points.
+
+    Parameters
+    ----------
+    points : np.ndarray
+        (N, 3) array of ordered points.
+
+    Returns
+    -------
+    length : float
+        Cumulative Euclidean distance along the path. Returns 1 for
+        single-point or empty inputs to avoid division by zero.
+    """
     if len(points) < 2:
         return 1
     length = 0
@@ -151,6 +300,19 @@ def _calc_full_path_from_points(points):
 
 
 def _calc_shortest_path_from_points(points):
+    """Compute the straight-line distance between the first and last point.
+
+    Parameters
+    ----------
+    points : np.ndarray
+        (N, 3) array of ordered points.
+
+    Returns
+    -------
+    length : float
+        Euclidean distance between endpoints. Returns 1 for single-point
+        or empty inputs to avoid division by zero.
+    """
     if len(points) < 2:
         return 1
     diff = np.array(points[0]) - np.array(points[-1])
@@ -159,6 +321,24 @@ def _calc_shortest_path_from_points(points):
 
 
 def compute_features(segmentation, voxel_spacing):
+    """Run the full feature extraction pipeline on a binary segmentation array.
+
+    Computes skeleton, bifurcations, endpoints, radii, branch statistics,
+    tortuosity, and total volume.
+
+    Parameters
+    ----------
+    segmentation : np.ndarray
+        Binary vessel segmentation array.
+    voxel_spacing : tuple of float
+        Voxel dimensions (mm).
+
+    Returns
+    -------
+    features : dict
+        Keys include ``branch_list``, ``bifurcations``, ``endpoints``,
+        ``radius_list``, ``total_volume``, ``num_branches``.
+    """
     skeleton = _extract_skeleton(segmentation).astype(np.uint8)
     bifurcations, endpoints = _get_bifurcation_endpoint_arrays(skeleton)
     radius_matrix = _extract_radius(segmentation, skeleton, voxel_spacing)
@@ -178,5 +358,19 @@ def compute_features(segmentation, voxel_spacing):
 
 
 def extract_features(nifti_path):
+    """Load a NIfTI segmentation and compute all vessel features.
+
+    Convenience wrapper around :func:`compute_features`.
+
+    Parameters
+    ----------
+    nifti_path : str
+        Path to a NIfTI file containing a binary vessel segmentation.
+
+    Returns
+    -------
+    features : dict
+        See :func:`compute_features` for details.
+    """
     segmentation, voxel_spacing = _load_seg_spacing(nifti_path)
     return compute_features(segmentation, voxel_spacing)

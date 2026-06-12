@@ -26,6 +26,14 @@ NNUNET_PARAMS = {
 
 
 def cmd_preprocess(args):
+    """Run the preprocessing step of the pipeline.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Must have ``bids_dir``, ``output_dir``, ``model``, ``skull_strip``,
+        and ``no_ray`` attributes.
+    """
     from anat2vessels.preprocess import preprocess_bids
 
     preprocess_bids(
@@ -38,6 +46,14 @@ def cmd_preprocess(args):
 
 
 def cmd_predict(args):
+    """Run nnUNet prediction on preprocessed images.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Must have ``input_dir``, ``output_dir``, ``model``, ``device``,
+        and ``folds`` attributes.
+    """
     os.makedirs(args.output_dir, exist_ok=True)
     params = NNUNET_PARAMS[args.model]
     env = os.environ.copy()
@@ -70,6 +86,13 @@ def cmd_predict(args):
 
 
 def cmd_features(args):
+    """Run vessel feature extraction on prediction outputs.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Must have ``input_dir``, ``output_path``, and ``no_ray`` attributes.
+    """
     from anat2vessels.vessels2csv import run_feature_extraction
 
     run_feature_extraction(
@@ -80,6 +103,14 @@ def cmd_features(args):
 
 
 def cmd_all(args):
+    """Run the full pipeline: preprocess, predict, and extract features.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Must have ``bids_dir``, ``output_dir``, ``model``, ``skull_strip``,
+        ``no_ray``, and ``device`` attributes.
+    """
     preproc_dir = os.path.join(args.output_dir, "preprocessed")
     pred_dir = os.path.join(args.output_dir, "predictions")
     features_csv = os.path.join(args.output_dir, "features.csv")
@@ -112,6 +143,10 @@ def cmd_all(args):
 
 
 def main():
+    """CLI entry point for the Docker pipeline (preprocess | predict | features | all).
+
+    Parses command-line arguments and dispatches to the appropriate subcommand.
+    """
     parser = argparse.ArgumentParser(description="Anat2Vessels full pipeline")
     subparsers = parser.add_subparsers(dest="command", required=True)
 

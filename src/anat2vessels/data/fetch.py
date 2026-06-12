@@ -15,10 +15,24 @@ REGISTRY = pooch.create(
 
 
 def fetch_ref_img():
+    """Fetch the reference (template) image for registration.
+
+    Returns
+    -------
+    str
+        Path to the downloaded reference NIfTI file.
+    """
     return REGISTRY.fetch("ref.nii.gz")
 
 
 def fetch_test_data():
+    """Fetch test data including T1w and T2w images.
+
+    Returns
+    -------
+    dict
+        Keys ``"t1w"`` and ``"t2w"`` mapped to local file paths.
+    """
     return {
         "t1w": REGISTRY.fetch("sub-01_ses-forrestgump_T1w.nii.gz"),
         "t2w": REGISTRY.fetch("sub-01_ses-forrestgump_T2w.nii.gz"),

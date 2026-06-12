@@ -14,6 +14,13 @@ _REF_IMG_PATH = None
 
 
 def _get_ref_path():
+    """Return the path to the reference image, fetching and caching it on first call.
+
+    Returns
+    -------
+    str
+        Path to the cached reference NIfTI file.
+    """
     global _REF_IMG_PATH
     if _REF_IMG_PATH is None:
         from anat2vessels.data.fetch import fetch_ref_img
@@ -23,6 +30,25 @@ def _get_ref_path():
 
 
 def __getattr__(name):
+    """Module-level fallback attribute access.
+
+    Provides backward-compatible ``REF_IMG_PATH`` via lazy fetch.
+
+    Parameters
+    ----------
+    name : str
+        Attribute name.
+
+    Returns
+    -------
+    str
+        Path to the reference image (if ``name == "REF_IMG_PATH"``).
+
+    Raises
+    ------
+    AttributeError
+        For any other attribute name.
+    """
     if name == "REF_IMG_PATH":
         return _get_ref_path()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -90,6 +116,29 @@ def preprocess_img(
 def preprocess_bids(
     bids_dir, output_dir, model="t1t2", skull_strip=False, use_ray=True
 ):
+    """Preprocess all subjects in a BIDS dataset.
+
+    For each subject, the requested modalities are registered to the reference
+    image, resampled, and cropped. Processing can be parallelized with Ray.
+
+    Parameters
+    ----------
+    bids_dir : str
+        Path to the BIDS dataset directory.
+    output_dir : str
+        Directory where preprocessed images are written.
+    model : {"t1", "t2", "t1t2"}, optional
+        Determines which modalities to process.
+    skull_strip : bool, optional
+        Whether to apply skull stripping.
+    use_ray : bool, optional
+        Enable parallel processing with Ray.
+
+    Raises
+    ------
+    ValueError
+        If no subjects are found in the BIDS directory.
+    """
     layout = BIDSLayout(bids_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -113,6 +162,21 @@ def preprocess_bids(
 
 
 def _preprocess_subject(layout, subject, model, skull_strip, output_dir):
+    """Preprocess all modalities for a single subject.
+
+    Parameters
+    ----------
+    layout : BIDSLayout
+        The BIDS layout object.
+    subject : str
+        Subject identifier (e.g. ``"01"``).
+    model : {"t1", "t2", "t1t2"}
+        Target model.
+    skull_strip : bool
+        Whether to apply skull stripping.
+    output_dir : str
+        Output directory.
+    """
     if model in ("t1", "t1t2"):
         _process_modality(
             layout,
@@ -141,6 +205,31 @@ def _preprocess_subject(layout, subject, model, skull_strip, output_dir):
 def _process_modality(
     layout, subject, suffix, extensions, output_dir, modality, suffix_ext, skull_strip
 ):
+    """Find and preprocess a single modality file for one subject.
+
+    Searches for files matching the given suffix and extension in the BIDS
+    layout, then runs :func:`preprocess_img` if the output does not already
+    exist.
+
+    Parameters
+    ----------
+    layout : BIDSLayout
+        The BIDS layout object.
+    subject : str
+        Subject identifier.
+    suffix : str
+        BIDS suffix (e.g. ``"T1w"``, ``"T2w"``).
+    extensions : list of str
+        File extensions to try (e.g. ``[".nii.gz", ".nii"]``).
+    output_dir : str
+        Output directory.
+    modality : {"t1", "t2"}
+        Modality passed to :func:`preprocess_img`.
+    suffix_ext : str
+        Output file suffix (e.g. ``"0000"``, ``"0001"``).
+    skull_strip : bool
+        Whether to apply skull stripping.
+    """
     for ext in extensions:
         file = layout.get(
             subject=subject, suffix=suffix, extension=ext, return_type="file"
@@ -155,6 +244,10 @@ def _process_modality(
 
 
 def run():
+    """CLI entry point for ``a2v-preprocess``.
+
+    Parses command-line arguments and calls :func:`preprocess_bids`.
+    """
     parser = argparse.ArgumentParser(
         description="Preprocess anatomical MRI for vessel segmentation"
     )
