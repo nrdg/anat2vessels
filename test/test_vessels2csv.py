@@ -261,3 +261,29 @@ class TestMain:
         df = pd.read_csv(str(output_path))
         assert len(df) == 1
         assert df["sub_id"].iloc[0] == "sub-01"
+
+    def test_handles_corrupt_file(self, tmp_path):
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-01_seg.nii.gz")
+        corrupt_path = tmp_path / "sub-02_seg.nii.gz"
+        corrupt_path.write_text("not a real nifti file")
+        output_path = tmp_path / "output.csv"
+        main(MockArgs(input_dir=str(tmp_path), output_path=str(output_path)))
+        df = pd.read_csv(str(output_path))
+        assert len(df) == 1
+        assert df["sub_id"].iloc[0] == "sub-01"
+
+    def test_no_matching_files(self, tmp_path, capsys):
+        (tmp_path / "readme.txt").write_text("not an image")
+        output_path = tmp_path / "output.csv"
+        main(MockArgs(input_dir=str(tmp_path), output_path=str(output_path)))
+        captured = capsys.readouterr()
+        assert "No valid data was processed" in captured.out
+        assert not output_path.exists()
+
+    def test_writes_to_correct_output_path(self, tmp_path):
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-01_seg.nii.gz")
+        output_path = tmp_path / "custom_output.csv"
+        main(MockArgs(input_dir=str(tmp_path), output_path=str(output_path)))
+        assert output_path.exists()
+        df = pd.read_csv(str(output_path))
+        assert len(df) == 1
