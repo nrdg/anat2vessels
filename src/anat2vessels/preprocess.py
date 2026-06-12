@@ -3,14 +3,12 @@ import os.path as op
 import argparse
 import ants
 import ray
+
 try:
     import antspynet
 except ImportError:
     antspynet = None
-try:
-    from bids import BIDSLayout
-except ImportError:
-    BIDSLayout = None
+from bids import BIDSLayout
 
 _REF_IMG_PATH = None
 
@@ -92,9 +90,6 @@ def preprocess_img(
 def preprocess_bids(
     bids_dir, output_dir, model="t1t2", skull_strip=False, use_ray=True
 ):
-    if BIDSLayout is None:
-        raise ImportError("pybids is required. Install with: pip install pybids")
-
     layout = BIDSLayout(bids_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -130,7 +125,6 @@ def _preprocess_subject(layout, subject, model, skull_strip, output_dir):
             skull_strip,
         )
 
-
     if model in ("t2", "t1t2"):
         _process_modality(
             layout,
@@ -144,7 +138,6 @@ def _preprocess_subject(layout, subject, model, skull_strip, output_dir):
         )
 
 
-
 def _process_modality(
     layout, subject, suffix, extensions, output_dir, modality, suffix_ext, skull_strip
 ):
@@ -155,7 +148,9 @@ def _process_modality(
         if file:
             out = op.join(output_dir, f"{subject}_{suffix_ext}.nii.gz")
             if not op.exists(out):
-                preprocess_img(file[0], out, modality=modality, do_skull_strip=skull_strip)
+                preprocess_img(
+                    file[0], out, modality=modality, do_skull_strip=skull_strip
+                )
             return
 
 

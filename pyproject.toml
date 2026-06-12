@@ -36,6 +36,7 @@ dependencies = [
     "antspyx",
     "antspynet",
     "pooch >= 1",
+    "pybids >= 0.17",
 ]
 
 [project.optional-dependencies]
@@ -68,10 +69,6 @@ all = [
     "anat2vessels[style]",
     "anat2vessels[test]",
 ]
-bids = [
-    "pybids >= 0.17",
-]
-
 [project.scripts]
 a2v-preprocess = "anat2vessels.preprocess:run"
 a2v-features = "anat2vessels.vessels2csv:run"
