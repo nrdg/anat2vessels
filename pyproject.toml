@@ -87,6 +87,9 @@ write_to = "src/anat2vessels/version.py"
 fallback_version = "0.0"
 local_scheme = "no-local-version"
 
+[tool.pytest.ini_options]
+script_launch_mode = "subprocess"
+
 [tool.codespell]
 ignore-words-list = "astroid"
 

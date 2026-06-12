@@ -1,3 +1,4 @@
+import json
 import os
 
 import ants
@@ -261,3 +262,179 @@ class TestPreprocessImg:
                 modality="t1",
                 do_skull_strip=False,
             )
+
+
+@pytest.fixture(scope="session")
+def small_ref_path_for_bids(ref_path, tmp_path_factory):
+    """Even smaller reference to speed up BIDS tests (min 24 voxels/dim)."""
+    cache = str(tmp_path_factory.mktemp("bids_ref"))
+    img = ants.image_read(ref_path)
+    target = tuple(max(d // 16, 24) for d in img.shape)
+    small = ants.resample_image(img, target, use_voxels=True, interp_type=0)
+    path = os.path.join(cache, "ref_bids.nii.gz")
+    ants.image_write(small, path)
+    return path
+
+
+class TestBidsPreprocessing:
+    @pytest.fixture(scope="class", autouse=True)
+    def _setup_bids(self, request, small_ref_path_for_bids, tmp_path_factory):
+        import shutil
+
+        _tmp = str(tmp_path_factory.mktemp("bids"))
+
+        # Copy reference to a stable location
+        ref_dir = str(tmp_path_factory.mktemp("ref"))
+        ref_path = os.path.join(ref_dir, "ref.nii.gz")
+        shutil.copy2(small_ref_path_for_bids, ref_path)
+        request.cls._ref_path = ref_path
+
+        # Create minimal BIDS directory
+        bids_dir = os.path.join(_tmp, "bids")
+        for sub in ("sub-01", "sub-02"):
+            os.makedirs(os.path.join(bids_dir, sub, "anat"))
+        with open(os.path.join(bids_dir, "dataset_description.json"), "w") as f:
+            json.dump({"Name": "Test", "BIDSVersion": "1.8.0"}, f)
+
+        # Create subject NIfTI files from the small reference
+        for sub in ("sub-01", "sub-02"):
+            shutil.copy2(
+                ref_path,
+                os.path.join(bids_dir, sub, "anat", f"{sub}_T1w.nii.gz"),
+            )
+        shutil.copy2(
+            ref_path,
+            os.path.join(bids_dir, "sub-02", "anat", "sub-02_T2w.nii.gz"),
+        )
+        request.cls._bids_dir = bids_dir
+
+        # Run preprocess_bids with the small reference
+        output_dir = os.path.join(_tmp, "output")
+        original_ref = avp._get_ref_path
+        avp._get_ref_path = lambda: ref_path
+        try:
+            avp.preprocess_bids(
+                bids_dir,
+                output_dir,
+                model="t1t2",
+                skull_strip=False,
+                use_ray=False,
+            )
+        finally:
+            avp._get_ref_path = original_ref
+        request.cls._output_dir = output_dir
+
+    def test_output_dir_created(self):
+        assert os.path.isdir(self._output_dir)
+
+    def test_all_subjects_processed(self):
+        for sub_id in ("01", "02"):
+            assert os.path.exists(
+                os.path.join(self._output_dir, f"{sub_id}_0000.nii.gz")
+            )
+
+    def test_t1t2_produces_two_modalities(self):
+        assert os.path.exists(os.path.join(self._output_dir, "02_0000.nii.gz"))
+        assert os.path.exists(os.path.join(self._output_dir, "02_0001.nii.gz"))
+
+    def test_outputs_are_valid_nifti(self):
+        files = os.listdir(self._output_dir)
+        assert len(files) > 0
+        for fname in files:
+            img = nib.load(os.path.join(self._output_dir, fname))
+            assert len(img.shape) == 3
+
+    def test_outputs_have_content(self):
+        files = os.listdir(self._output_dir)
+        assert len(files) > 0
+        for fname in files:
+            fdata = nib.load(os.path.join(self._output_dir, fname)).get_fdata()
+            assert fdata.size > 0
+
+    def test_process_modality_finds_file(self, tmp_path):
+        layout = avp.BIDSLayout(self._bids_dir, validate=False)
+        out_dir = str(tmp_path / "modality_test")
+        os.makedirs(out_dir)
+        original_ref = avp._get_ref_path
+        avp._get_ref_path = lambda: self._ref_path
+        try:
+            avp._process_modality(
+                layout,
+                "01",
+                "T1w",
+                [".nii.gz", ".nii"],
+                out_dir,
+                "t1",
+                "0000",
+                skull_strip=False,
+            )
+        finally:
+            avp._get_ref_path = original_ref
+        assert os.path.exists(os.path.join(out_dir, "01_0000.nii.gz"))
+
+    def test_process_modality_no_match(self, tmp_path):
+        layout = avp.BIDSLayout(self._bids_dir, validate=False)
+        out_dir = str(tmp_path / "no_match")
+        os.makedirs(out_dir)
+        avp._process_modality(
+            layout,
+            "01",
+            "FLAIR",
+            [".nii.gz", ".nii"],
+            out_dir,
+            "t1",
+            "0000",
+            skull_strip=False,
+        )
+        assert not os.path.exists(os.path.join(out_dir, "01_0000.nii.gz"))
+
+    def test_preprocess_subject_t1(self, tmp_path):
+        layout = avp.BIDSLayout(self._bids_dir, validate=False)
+        out_dir = str(tmp_path / "t1_only")
+        os.makedirs(out_dir)
+        original_ref = avp._get_ref_path
+        avp._get_ref_path = lambda: self._ref_path
+        try:
+            avp._preprocess_subject(
+                layout, "01", "t1", skull_strip=False, output_dir=out_dir
+            )
+        finally:
+            avp._get_ref_path = original_ref
+        assert os.path.exists(os.path.join(out_dir, "01_0000.nii.gz"))
+
+    def test_preprocess_subject_t2(self, tmp_path):
+        layout = avp.BIDSLayout(self._bids_dir, validate=False)
+        out_dir = str(tmp_path / "t2_only")
+        os.makedirs(out_dir)
+        original_ref = avp._get_ref_path
+        avp._get_ref_path = lambda: self._ref_path
+        try:
+            avp._preprocess_subject(
+                layout, "02", "t2", skull_strip=False, output_dir=out_dir
+            )
+        finally:
+            avp._get_ref_path = original_ref
+        assert os.path.exists(os.path.join(out_dir, "02_0000.nii.gz"))
+
+    def test_preprocess_subject_t1t2(self, tmp_path):
+        layout = avp.BIDSLayout(self._bids_dir, validate=False)
+        out_dir = str(tmp_path / "t1t2_full")
+        os.makedirs(out_dir)
+        original_ref = avp._get_ref_path
+        avp._get_ref_path = lambda: self._ref_path
+        try:
+            avp._preprocess_subject(
+                layout, "02", "t1t2", skull_strip=False, output_dir=out_dir
+            )
+        finally:
+            avp._get_ref_path = original_ref
+        assert os.path.exists(os.path.join(out_dir, "02_0000.nii.gz"))
+        assert os.path.exists(os.path.join(out_dir, "02_0001.nii.gz"))
+
+    def test_preprocess_bids_empty_dir(self, tmp_path):
+        empty = str(tmp_path / "empty")
+        os.makedirs(empty)
+        with open(os.path.join(empty, "dataset_description.json"), "w") as f:
+            json.dump({"Name": "Empty", "BIDSVersion": "1.8.0"}, f)
+        with pytest.raises(ValueError, match="No subjects found"):
+            avp.preprocess_bids(empty, str(tmp_path / "out"), use_ray=False)

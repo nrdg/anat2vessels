@@ -1,9 +1,11 @@
+import os
+
 import numpy as np
 import nibabel as nib
 import pandas as pd
 import pytest
 
-from anat2vessels.vessels2csv import main, out_list_to_df
+from anat2vessels.vessels2csv import main, out_list_to_df, run_feature_extraction
 
 
 class TestOutListToDf:
@@ -287,3 +289,62 @@ class TestMain:
         assert output_path.exists()
         df = pd.read_csv(str(output_path))
         assert len(df) == 1
+
+
+class TestRunFeatureExtraction:
+    SPACING = (1.0, 1.0, 1.0)
+
+    def _vessel_seg(self, shape=(10, 10, 10)):
+        data = np.zeros(shape, dtype=np.uint8)
+        data[5, 5, 2:8] = 1
+        return data
+
+    def test_serial_mode_writes_csv(self, tmp_path):
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-01_seg.nii.gz")
+        output_path = str(tmp_path / "output.csv")
+        run_feature_extraction(
+            input_dir=str(tmp_path), output_path=output_path, use_ray=False
+        )
+        assert os.path.exists(output_path)
+        df = pd.read_csv(output_path)
+        assert len(df) == 1
+
+    def test_serial_mode_writes_expected_columns(self, tmp_path):
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-01_seg.nii.gz")
+        output_path = str(tmp_path / "output.csv")
+        run_feature_extraction(
+            input_dir=str(tmp_path), output_path=output_path, use_ray=False
+        )
+        df = pd.read_csv(output_path)
+        expected = {
+            "sub_id",
+            "num_branches",
+            "total_volume",
+            "bifurcations",
+            "endpoints",
+            "radius_list",
+            "mean_radius",
+            "max_radius",
+            "min_radius",
+            "mean_tortuosity",
+            "max_tortuosity",
+            "min_tortuosity",
+            "tortuosity_list",
+            "branch_list",
+            "total_branch_length",
+            "mean_branch_length",
+            "max_branch_length",
+        }
+        assert set(df.columns) == expected
+
+    def test_overwrites_existing_csv(self, tmp_path):
+        _make_nifti(self._vessel_seg(), self.SPACING, tmp_path / "sub-01_seg.nii.gz")
+        output_path = str(tmp_path / "output.csv")
+        # Write initial content, then overwrite
+        pd.DataFrame({"dummy": [1]}).to_csv(output_path, index=False)
+        run_feature_extraction(
+            input_dir=str(tmp_path), output_path=output_path, use_ray=False
+        )
+        df = pd.read_csv(output_path)
+        assert "dummy" not in df.columns
+        assert "sub_id" in df.columns
