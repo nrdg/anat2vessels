@@ -301,14 +301,22 @@ class TestBidsPreprocessing:
         assert os.path.isdir(self._output_dir)
 
     def test_all_subjects_processed(self):
-        for sub_id in ("01", "02"):
+        subjects = avp.BIDSLayout(self._bids_dir, validate=False).get_subjects()
+        assert len(subjects) > 0
+        for sub_id in subjects:
             assert os.path.exists(
                 os.path.join(self._output_dir, f"{sub_id}_0000.nii.gz")
             )
 
     def test_t1t2_produces_two_modalities(self):
-        assert os.path.exists(os.path.join(self._output_dir, "02_0000.nii.gz"))
-        assert os.path.exists(os.path.join(self._output_dir, "02_0001.nii.gz"))
+        subjects = avp.BIDSLayout(self._bids_dir, validate=False).get_subjects()
+        for sub_id in subjects:
+            assert os.path.exists(
+                os.path.join(self._output_dir, f"{sub_id}_0000.nii.gz")
+            )
+            assert os.path.exists(
+                os.path.join(self._output_dir, f"{sub_id}_0001.nii.gz")
+            )
 
     def test_outputs_are_valid_nifti(self):
         files = os.listdir(self._output_dir)
@@ -377,32 +385,40 @@ class TestBidsPreprocessing:
 
     def test_preprocess_subject_t2(self, tmp_path):
         layout = avp.BIDSLayout(self._bids_dir, validate=False)
+        subjects = layout.get_subjects()
+        if not any(
+            layout.get(subject=s, suffix="T2w", return_type="file") for s in subjects
+        ):
+            pytest.skip("No subject with T2w in BIDS dataset")
         out_dir = str(tmp_path / "t2_only")
         os.makedirs(out_dir)
         original_ref = avp._get_ref_path
         avp._get_ref_path = lambda: self._ref_path
         try:
             avp._preprocess_subject(
-                layout, "02", "t2", skull_strip=False, output_dir=out_dir
+                layout, subjects[0], "t2", skull_strip=False, output_dir=out_dir
             )
         finally:
             avp._get_ref_path = original_ref
-        assert os.path.exists(os.path.join(out_dir, "02_0000.nii.gz"))
+        assert os.path.exists(os.path.join(out_dir, f"{subjects[0]}_0000.nii.gz"))
 
     def test_preprocess_subject_t1t2(self, tmp_path):
         layout = avp.BIDSLayout(self._bids_dir, validate=False)
+        subjects = layout.get_subjects()
+        if not subjects:
+            pytest.skip("No subjects in BIDS dataset")
         out_dir = str(tmp_path / "t1t2_full")
         os.makedirs(out_dir)
         original_ref = avp._get_ref_path
         avp._get_ref_path = lambda: self._ref_path
         try:
             avp._preprocess_subject(
-                layout, "02", "t1t2", skull_strip=False, output_dir=out_dir
+                layout, subjects[0], "t1t2", skull_strip=False, output_dir=out_dir
             )
         finally:
             avp._get_ref_path = original_ref
-        assert os.path.exists(os.path.join(out_dir, "02_0000.nii.gz"))
-        assert os.path.exists(os.path.join(out_dir, "02_0001.nii.gz"))
+        assert os.path.exists(os.path.join(out_dir, f"{subjects[0]}_0000.nii.gz"))
+        assert os.path.exists(os.path.join(out_dir, f"{subjects[0]}_0001.nii.gz"))
 
     def test_preprocess_bids_empty_dir(self, tmp_path):
         empty = str(tmp_path / "empty")

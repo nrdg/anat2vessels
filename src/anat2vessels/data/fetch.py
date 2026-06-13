@@ -100,6 +100,9 @@ def fetch_bids_dataset():
         Path to the BIDS dataset root.
     """
     import json
+    import shutil
+
+    data = fetch_test_data()
 
     bids_dir = pooch.os_cache("anat2vessels") / "bids"
     desc = bids_dir / "dataset_description.json"
@@ -107,6 +110,9 @@ def fetch_bids_dataset():
     if not desc.exists():
         sub_anat = bids_dir / "sub-01" / "ses-forrestgump" / "anat"
         sub_anat.mkdir(parents=True, exist_ok=True)
+
+        shutil.copy2(data["t1w"], sub_anat / "sub-01_ses-forrestgump_T1w.nii.gz")
+        shutil.copy2(data["t2w"], sub_anat / "sub-01_ses-forrestgump_T2w.nii.gz")
 
         with open(desc, "w") as f:
             json.dump({"Name": "Anat2Vessels Test", "BIDSVersion": "1.8.0"}, f)
