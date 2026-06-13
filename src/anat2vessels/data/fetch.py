@@ -111,8 +111,12 @@ def fetch_bids_dataset():
         sub_anat = bids_dir / "sub-01" / "ses-forrestgump" / "anat"
         sub_anat.mkdir(parents=True, exist_ok=True)
 
-        shutil.copy2(data["t1w"], sub_anat / "sub-01_ses-forrestgump_T1w.nii.gz")
-        shutil.copy2(data["t2w"], sub_anat / "sub-01_ses-forrestgump_T2w.nii.gz")
+        t1_path = sub_anat / "sub-01_ses-forrestgump_T1w.nii.gz"
+        t2_path = sub_anat / "sub-01_ses-forrestgump_T2w.nii.gz"
+
+        if not t1_path.exists() or not t2_path.exists():
+            shutil.copy2(data["t1w"], t1_path)
+            shutil.copy2(data["t2w"], t2_path)
 
         with open(desc, "w") as f:
             json.dump({"Name": "Anat2Vessels Test", "BIDSVersion": "1.8.0"}, f)
