@@ -2,6 +2,22 @@ import os
 import subprocess
 
 import pooch
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
+def _make_downloader():
+    session = requests.Session()
+    retries = Retry(
+        total=5,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["HEAD", "GET"],
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    return pooch.HTTPDownloader(session=session)
+
 
 _BASE_URL = "https://huggingface.co/huggingbrain/AnatomicalVesselSeg/resolve/main/"
 
@@ -15,6 +31,7 @@ REGISTRY = pooch.create(
     },
     retry_if_failed=5,
 )
+REGISTRY.downloader = _make_downloader()
 
 _MODEL_HASHES = {
     "t1": "sha256:f83364b0ca95d4955347c0d4856560fb05f8f5eca45f8704d2455973974c6bb0",
@@ -34,6 +51,7 @@ _MODEL_POOCH = pooch.create(
     },
     retry_if_failed=3,
 )
+_MODEL_POOCH.downloader = _make_downloader()
 
 
 def _model_is_installed(model_name):
