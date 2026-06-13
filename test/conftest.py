@@ -4,7 +4,7 @@ import ants
 import numpy as np
 import pytest
 
-from anat2vessels.data.fetch import fetch_ref_img, fetch_test_data
+from anat2vessels.data.fetch import fetch_bids_dataset, fetch_ref_img, fetch_test_data
 
 
 @pytest.fixture(scope="session")
@@ -68,6 +68,23 @@ def small_ref_path(ref_path, tmp_path_factory):
 
 
 # ---------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def bids_dataset():
+    return fetch_bids_dataset()
+
+
+@pytest.fixture(scope="session")
+def small_ref_path_for_bids(ref_path, tmp_path_factory):
+    """Even smaller reference to speed up BIDS tests (min 24 voxels/dim)."""
+    cache = str(tmp_path_factory.mktemp("bids_ref"))
+    img = ants.image_read(ref_path)
+    target = tuple(max(d // 16, 24) for d in img.shape)
+    small = ants.resample_image(img, target, use_voxels=True, interp_type=0)
+    path = os.path.join(cache, "ref_bids.nii.gz")
+    ants.image_write(small, path)
+    return path
+
+
 # Features test fixtures
 # ---------------------------------------------------------------------------
 

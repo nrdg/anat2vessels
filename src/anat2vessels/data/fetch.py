@@ -88,6 +88,32 @@ def ensure_model_installed(model_name):
     )
 
 
+def fetch_bids_dataset():
+    """Get a BIDS-structured test dataset.
+
+    Downloads test images via pooch (if not cached) and arranges them
+    into a BIDS-compliant directory within the pooch cache.
+
+    Returns
+    -------
+    str
+        Path to the BIDS dataset root.
+    """
+    import json
+
+    bids_dir = pooch.os_cache("anat2vessels") / "bids"
+    desc = bids_dir / "dataset_description.json"
+
+    if not desc.exists():
+        sub_anat = bids_dir / "sub-01" / "ses-forrestgump" / "anat"
+        sub_anat.mkdir(parents=True, exist_ok=True)
+
+        with open(desc, "w") as f:
+            json.dump({"Name": "Anat2Vessels Test", "BIDSVersion": "1.8.0"}, f)
+
+    return str(bids_dir)
+
+
 def fetch_ref_img():
     return REGISTRY.fetch("ref.nii.gz")
 

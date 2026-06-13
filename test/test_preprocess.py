@@ -264,21 +264,11 @@ class TestPreprocessImg:
             )
 
 
-@pytest.fixture(scope="session")
-def small_ref_path_for_bids(ref_path, tmp_path_factory):
-    """Even smaller reference to speed up BIDS tests (min 24 voxels/dim)."""
-    cache = str(tmp_path_factory.mktemp("bids_ref"))
-    img = ants.image_read(ref_path)
-    target = tuple(max(d // 16, 24) for d in img.shape)
-    small = ants.resample_image(img, target, use_voxels=True, interp_type=0)
-    path = os.path.join(cache, "ref_bids.nii.gz")
-    ants.image_write(small, path)
-    return path
-
-
 class TestBidsPreprocessing:
     @pytest.fixture(scope="class", autouse=True)
-    def _setup_bids(self, request, small_ref_path_for_bids, tmp_path_factory):
+    def _setup_bids(
+        self, request, bids_dataset, small_ref_path_for_bids, tmp_path_factory
+    ):
         import shutil
 
         _tmp = str(tmp_path_factory.mktemp("bids"))
@@ -289,24 +279,7 @@ class TestBidsPreprocessing:
         shutil.copy2(small_ref_path_for_bids, ref_path)
         request.cls._ref_path = ref_path
 
-        # Create minimal BIDS directory
-        bids_dir = os.path.join(_tmp, "bids")
-        for sub in ("sub-01", "sub-02"):
-            os.makedirs(os.path.join(bids_dir, sub, "anat"))
-        with open(os.path.join(bids_dir, "dataset_description.json"), "w") as f:
-            json.dump({"Name": "Test", "BIDSVersion": "1.8.0"}, f)
-
-        # Create subject NIfTI files from the small reference
-        for sub in ("sub-01", "sub-02"):
-            shutil.copy2(
-                ref_path,
-                os.path.join(bids_dir, sub, "anat", f"{sub}_T1w.nii.gz"),
-            )
-        shutil.copy2(
-            ref_path,
-            os.path.join(bids_dir, "sub-02", "anat", "sub-02_T2w.nii.gz"),
-        )
-        request.cls._bids_dir = bids_dir
+        request.cls._bids_dir = bids_dataset
 
         # Run preprocess_bids with the small reference
         output_dir = os.path.join(_tmp, "output")
@@ -314,7 +287,7 @@ class TestBidsPreprocessing:
         avp._get_ref_path = lambda: ref_path
         try:
             avp.preprocess_bids(
-                bids_dir,
+                bids_dataset,
                 output_dir,
                 model="t1t2",
                 skull_strip=False,
