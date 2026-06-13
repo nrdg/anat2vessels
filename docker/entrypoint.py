@@ -39,6 +39,9 @@ def cmd_preprocess(args):
 
 def cmd_predict(args):
     os.makedirs(args.output_dir, exist_ok=True)
+    from anat2vessels.data.fetch import ensure_model_installed
+
+    ensure_model_installed(args.model)
     params = NNUNET_PARAMS[args.model]
     env = os.environ.copy()
     cmd = [

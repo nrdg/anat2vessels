@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Quantifying brain vascular morphology in anatomical MR images using deep learning"
 readme = "README.md"
 license = {text = "BSD License"}
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 authors = [
     {name = "Asa Gilmore"},
     {name = "Ariel Rokem"}

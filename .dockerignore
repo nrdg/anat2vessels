@@ -11,6 +11,4 @@ test/
 figures/
 .pre-commit-config.yaml
 LICENSE
-docker/t1/
-docker/t2/
-docker/t1t2/
+
