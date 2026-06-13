@@ -1,1 +1,5 @@
-from anat2vessels.data.fetch import fetch_ref_img, fetch_test_data  # noqa: F401
+from anat2vessels.data.fetch import (  # noqa: F401
+    fetch_ref_img,
+    fetch_test_data,
+    ensure_model_installed,
+)
