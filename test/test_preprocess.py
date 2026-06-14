@@ -26,12 +26,12 @@ class TestFetchTestData:
     def test_t1w_valid_nifti(self, t1w_path):
         img = nib.load(t1w_path)
         assert len(img.shape) == 3
-        assert img.shape == (274, 384, 384)
+        assert img.shape == (256, 256, 150)
 
     def test_t2w_valid_nifti(self, t2w_path):
         img = nib.load(t2w_path)
         assert len(img.shape) == 3
-        assert img.shape == (274, 384, 384)
+        assert img.shape == (256, 256, 130)
 
     def test_t1w_readable_by_ants(self, t1w_path):
         img = ants.image_read(t1w_path)

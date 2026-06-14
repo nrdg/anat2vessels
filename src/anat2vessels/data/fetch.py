@@ -26,8 +26,8 @@ REGISTRY = pooch.create(
     base_url=_BASE_URL,
     registry={
         "ref.nii.gz": "sha256:a73a27eb80db1bdd36e33adb843da21e5df145402c773695193c56ade1fa30b0",
-        "sub-01_ses-forrestgump_T1w.nii.gz": "sha256:7c702aee386767418cc1a914fb8957c75ff2844e1d72de2c2d4b85cbac88f0cf",
-        "sub-01_ses-forrestgump_T2w.nii.gz": "sha256:652248cb57ccbca27778660960b005e9206a9281811ea8480cae6fb3eb2652d2",
+        "IXI100-Guys-0747-T1.nii.gz": "sha256:c91022920ea44981b51f10d2e9acb6fe48232089d1e0b48df577b992ede6602f",
+        "IXI100-Guys-0747-T2.nii.gz": "sha256:b76187941321715d41617a0028cf5dedb08a192f9d3fa03bc9d6dea18771aeac",
     },
     retry_if_failed=5,
 )
@@ -125,15 +125,16 @@ def fetch_bids_dataset():
     bids_dir = pooch.os_cache("anat2vessels") / "bids"
     desc = bids_dir / "dataset_description.json"
 
-    if not desc.exists():
-        sub_anat = bids_dir / "sub-01" / "ses-forrestgump" / "anat"
+    sub_anat = bids_dir / "sub-01" / "ses-Guys" / "anat"
+    t1_path = sub_anat / "sub-01_ses-Guys_T1w.nii.gz"
+    t2_path = sub_anat / "sub-01_ses-Guys_T2w.nii.gz"
+
+    if not desc.exists() or not t1_path.exists() or not t2_path.exists():
         sub_anat.mkdir(parents=True, exist_ok=True)
 
-        t1_path = sub_anat / "sub-01_ses-forrestgump_T1w.nii.gz"
-        t2_path = sub_anat / "sub-01_ses-forrestgump_T2w.nii.gz"
-
-        if not t1_path.exists() or not t2_path.exists():
+        if not t1_path.exists():
             shutil.copy2(data["t1w"], t1_path)
+        if not t2_path.exists():
             shutil.copy2(data["t2w"], t2_path)
 
         with open(desc, "w") as f:
@@ -148,6 +149,6 @@ def fetch_ref_img():
 
 def fetch_test_data():
     return {
-        "t1w": REGISTRY.fetch("sub-01_ses-forrestgump_T1w.nii.gz"),
-        "t2w": REGISTRY.fetch("sub-01_ses-forrestgump_T2w.nii.gz"),
+        "t1w": REGISTRY.fetch("IXI100-Guys-0747-T1.nii.gz"),
+        "t2w": REGISTRY.fetch("IXI100-Guys-0747-T2.nii.gz"),
     }
