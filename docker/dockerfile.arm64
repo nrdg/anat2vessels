@@ -1,0 +1,25 @@
+FROM --platform=linux/arm64 python:3.11-slim
+
+RUN pip install --no-cache-dir torch==2.5.1 \
+        --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir nnunetv2 \
+    && pip install --no-cache-dir antspyx==0.4.2 antspynet
+
+RUN mkdir -p /data/nnUNet_raw \
+    && mkdir -p /data/nnUNet_preprocessed \
+    && mkdir -p /data/nnUNet_results
+
+ENV nnUNet_raw="/data/nnUNet_raw"\
+    nnUNet_preprocessed="/data/nnUNet_preprocessed"\
+    nnUNet_results="/data/nnUNet_results"
+
+COPY pyproject.toml README.md /src/anat2vessels/
+COPY src/ /src/anat2vessels/src/
+RUN pip install --no-cache-dir -e "/src/anat2vessels"
+
+COPY docker/entrypoint.py /usr/local/bin/a2v-pipeline
+RUN chmod +x /usr/local/bin/a2v-pipeline
+
+WORKDIR /data
+
+ENTRYPOINT ["a2v-pipeline"]

@@ -36,7 +36,7 @@ def main(args):
 
 
 def ray_main(args):
-    ray.init(num_cpus=(cpu_count() - 1))
+    ray.init(num_cpus=(cpu_count() - 1), ignore_reinit_error=True)
     data_list = []
 
     remote = ray.remote(extract_features)

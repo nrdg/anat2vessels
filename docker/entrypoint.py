@@ -18,9 +18,9 @@ NNUNET_PARAMS = {
     },
     "t1t2": {
         "dataset": "096",
-        "trainer": "nnUNetTrainerCLDLoss",
+        "trainer": "nnUNetTrainer",
         "config": "3d_fullres",
-        "plans": "nnUNetResEncUNetMPlans",
+        "plans": "nnUNetResEncUNetLPlans",
     },
 }
 
@@ -54,7 +54,7 @@ def cmd_predict(args):
         args.output_dir,
         "-f",
     ]
-    if args.folds:
+    if getattr(args, "folds", None):
         cmd += args.folds.split()
     else:
         cmd += ["0", "1", "2", "3", "4"]
@@ -68,8 +68,19 @@ def cmd_predict(args):
         params["plans"],
     ]
     if args.device:
-        cmd += ["--device", args.device]
+        cmd += ["-device", args.device]
     subprocess.run(cmd, env=env, check=True)
+
+
+def cmd_fetch_test_data(args):
+    import shutil
+    from anat2vessels.data.fetch import fetch_bids_dataset
+
+    src = fetch_bids_dataset()
+    dst = args.output_dir
+    os.makedirs(dst, exist_ok=True)
+    shutil.copytree(src, dst, dirs_exist_ok=True)
+    print(f"Test data written to {dst}")
 
 
 def cmd_features(args):
@@ -101,6 +112,7 @@ def cmd_all(args):
         output_dir=pred_dir,
         model=args.model,
         device=args.device,
+        folds=args.folds,
     )
     cmd_predict(predict_args)
 
@@ -140,6 +152,12 @@ def main():
     p_feat.add_argument("--no_ray", action="store_true")
     p_feat.set_defaults(func=cmd_features)
 
+    p_fetch = subparsers.add_parser(
+        "fetch-test-data", help="Download test BIDS dataset"
+    )
+    p_fetch.add_argument("--output-dir", required=True, dest="output_dir")
+    p_fetch.set_defaults(func=cmd_fetch_test_data)
+
     p_all = subparsers.add_parser("all", help="Run full pipeline")
     p_all.add_argument("--bids_dir", required=True)
     p_all.add_argument("--output_dir", required=True)
@@ -147,6 +165,7 @@ def main():
     p_all.add_argument("--skull_strip", action="store_true")
     p_all.add_argument("--no_ray", action="store_true")
     p_all.add_argument("--device", default=None)
+    p_all.add_argument("--folds", default=None)
     p_all.set_defaults(func=cmd_all)
 
     parsed = parser.parse_args()

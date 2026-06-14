@@ -104,15 +104,16 @@ def preprocess_bids(
         futures = []
         for sub in subjects:
             futures.append(
-                remote_func.remote(layout, sub, model, skull_strip, output_dir)
+                remote_func.remote(bids_dir, sub, model, skull_strip, output_dir)
             )
         ray.get(futures)
     else:
         for sub in subjects:
-            _preprocess_subject(layout, sub, model, skull_strip, output_dir)
+            _preprocess_subject(bids_dir, sub, model, skull_strip, output_dir)
 
 
-def _preprocess_subject(layout, subject, model, skull_strip, output_dir):
+def _preprocess_subject(bids_dir, subject, model, skull_strip, output_dir):
+    layout = BIDSLayout(bids_dir)
     if model in ("t1", "t1t2"):
         _process_modality(
             layout,

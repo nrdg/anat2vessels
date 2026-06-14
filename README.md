@@ -14,13 +14,17 @@ The pipeline assumes your data is organized according to the
 Build the image:
 
 ```bash
+# For x86_64 / GPU systems:
 docker build -f docker/dockerfile -t anat2vessels:latest .
+
+# For Apple Silicon (M-series, ARM64, CPU-only):
+docker build -f docker/dockerfile.arm64 -t anat2vessels:arm64 .
 ```
 
 Run the full pipeline (preprocess + inference + feature extraction) in one command:
 
 ```bash
-docker run --gpus=1 \
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
   -v /path/to/bids:/data/bids \
   -v /path/to/results:/data/results \
   anat2vessels:latest all \
@@ -34,19 +38,22 @@ Or run individual steps:
 
 ```bash
 # Step 1: Preprocess
-docker run --gpus=1 -v /path/to/bids:/data/bids -v /path/to/results:/data/results \
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
+  -v /path/to/bids:/data/bids -v /path/to/results:/data/results \
   anat2vessels:latest preprocess \
   --bids_dir /data/bids --output_dir /data/results/preprocessed \
   --model t1t2 --skull_strip
 
 # Step 2: nnUNet inference
-docker run --gpus=1 -v /path/to/results:/data/results \
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
+  -v /path/to/results:/data/results \
   anat2vessels:latest predict \
   --input_dir /data/results/preprocessed --output_dir /data/results/predictions \
   --model t1t2
 
 # Step 3: Feature extraction
-docker run --gpus=1 -v /path/to/results:/data/results \
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
+  -v /path/to/results:/data/results \
   anat2vessels:latest features \
   --input_dir /data/results/predictions --output_path /data/results/features.csv
 ```
@@ -58,6 +65,56 @@ docker run --gpus=1 -v /path/to/results:/data/results \
 | `t1t2` | Combined T1 + T2 (default) |
 
 Note: GPU support requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+On Apple Silicon, the ARM64 image runs natively without GPU emulation.
+Omit `--gpus` and nnUNet will automatically use the CPU.
+
+### Running on the test dataset
+
+The package includes a small test dataset downloaded from Hugging Face on
+first use. To run the full pipeline on it:
+
+```bash
+# Build (choose the image for your platform)
+docker build -f docker/dockerfile -t anat2vessels:latest .
+# or: docker build -f docker/dockerfile.arm64 -t anat2vessels:arm64 .
+
+To avoid re-downloading model weights and test data on every run,
+mount the local pooch cache into the container:
+
+```bash
+mkdir -p ~/.cache/anat2vessels
+```
+
+Add `-v ~/.cache/anat2vessels:/root/.cache/anat2vessels` to any
+`docker run` command in this section to reuse previously downloaded
+files instead of fetching them from Hugging Face each time.
+
+For example:
+
+```bash
+mkdir -p ~/.cache/anat2vessels
+docker run --rm \
+  -v ~/.cache/anat2vessels:/root/.cache/anat2vessels \
+  -v /tmp/bids:/data \
+  anat2vessels:latest fetch-test-data --output-dir /data
+```
+
+# Run the full pipeline (GPU)
+docker run --gpus=1 \
+  -v /tmp/bids:/data/bids:ro \
+  -v /tmp/results:/data/results \
+  anat2vessels:latest all \
+  --bids_dir /data/bids --output_dir /data/results \
+  --model t1t2 --skull_strip
+
+# Or run on ARM64 (Apple Silicon)
+docker run \
+  -v /tmp/bids:/data/bids:ro \
+  -v /tmp/results:/data/results \
+  anat2vessels:arm64 all \
+  --bids_dir /data/bids --output_dir /data/results \
+  --model t1t2
+```
 
 ### Local installation
 
