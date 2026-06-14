@@ -125,15 +125,16 @@ def fetch_bids_dataset():
     bids_dir = pooch.os_cache("anat2vessels") / "bids"
     desc = bids_dir / "dataset_description.json"
 
-    if not desc.exists():
-        sub_anat = bids_dir / "sub-01" / "ses-ixifiles" / "anat"
+    sub_anat = bids_dir / "sub-01" / "ses-Guys" / "anat"
+    t1_path = sub_anat / "sub-01_ses-Guys_T1w.nii.gz"
+    t2_path = sub_anat / "sub-01_ses-Guys_T2w.nii.gz"
+
+    if not desc.exists() or not t1_path.exists() or not t2_path.exists():
         sub_anat.mkdir(parents=True, exist_ok=True)
 
-        t1_path = sub_anat / "IXI100-Guys-0747-T1.nii.gz"
-        t2_path = sub_anat / "IXI100-Guys-0747-T2.nii.gz"
-
-        if not t1_path.exists() or not t2_path.exists():
+        if not t1_path.exists():
             shutil.copy2(data["t1w"], t1_path)
+        if not t2_path.exists():
             shutil.copy2(data["t2w"], t2_path)
 
         with open(desc, "w") as f:
