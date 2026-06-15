@@ -36,7 +36,7 @@ def main(args):
 
 
 def ray_main(args):
-    ray.init(num_cpus=(cpu_count() - 1))
+    ray.init(num_cpus=(cpu_count() - 1), ignore_reinit_error=True)
     data_list = []
 
     remote = ray.remote(extract_features)
@@ -140,15 +140,28 @@ def out_list_to_df(out_list):
     return pd.DataFrame(df_list)
 
 
-if __name__ == "__main__":
-    args = argparse.ArgumentParser()
-    args.add_argument("--input_dir", type=str, required=True)
-    args.add_argument("--output_path", type=str, required=True)
-    args.add_argument("--use_ray", type=bool, default=True)
-
-    args = args.parse_args()
-
-    if args.use_ray:
+def run_feature_extraction(input_dir, output_path, use_ray=True):
+    args = argparse.Namespace(
+        input_dir=input_dir,
+        output_path=output_path,
+        use_ray=use_ray,
+    )
+    if use_ray:
         ray_main(args)
     else:
         main(args)
+
+
+def run():
+    parser = argparse.ArgumentParser(
+        description="Extract vessel features from predictions"
+    )
+    parser.add_argument("--input_dir", type=str, required=True)
+    parser.add_argument("--output_path", type=str, required=True)
+    parser.add_argument("--no_ray", action="store_true")
+    args = parser.parse_args()
+    run_feature_extraction(args.input_dir, args.output_path, use_ray=not args.no_ray)
+
+
+if __name__ == "__main__":
+    run()

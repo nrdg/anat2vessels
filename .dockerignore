@@ -1,0 +1,14 @@
+.git/
+.gitignore
+.conda/
+.ruff_cache/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+.spin/
+test/
+figures/
+.pre-commit-config.yaml
+LICENSE
+

@@ -4,86 +4,143 @@ Anat2Vess is a deep learning based tool which allows for users to extract inform
 
 For further details on training, validation and performance of our model, see our preprint [here](https://www.biorxiv.org/content/10.1101/2025.05.06.652518v1).
 
-## Step 1: Data Preprocessing
+## Usage
 
-Before running the segmentation model on your dataset it's necessary to preprocess
-the data.
+The pipeline assumes your data is organized according to the
+[BIDS standard](https://bids.neuroimaging.io/).
 
-We provide a python script which automates this process. To run this script,
-we recommend using a virtual environment like conda for this.
+### Docker (Recommended)
 
-Example:
-
-```bash
-pip install -r requirements.txt
-python preprocess_imgs.py --t1_dir ./t1w --t2_dir ./t2w --output_dir ./preprocessed --id_delim "_"
-```
-
-This script will register all images to a reference image, and resample them to a shape of (512,512,160) with 1mm isotropic voxels.
-
-The Anat2Vessel model requires the data to be skull stripped,
-this can be done with the preprocess_imgs.py script by adding the --skull_strip
-argument to the command. This requires antspynet and tensorflow to be installed.
-If using nvidia gpu for this, make sure to install tensorflow with
-```bash
-pip install 'tensorflow[and-cuda]'
-```
-
-If running inference on a large dataset, optionally install ray,
-and the script with run in parallel using all available cores.
-To disable this use the --no_ray flag.
-## Step 2: Setting up nnUNet
-
-To run inference on the Anat2Vessel model, you can either install
-nnUNet locally, or use the docker containers provided.
-
-### local installation
-First, install nnUNet according to their instruction found [here](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/installation_instructions.md).
-
-Then download the model .zip file of choice from our repository found [here](https://huggingface.co/huggingbrain/AnatomicalVesselSeg), and install running $nnUNetv2_install_pretrained_model_from_zip /path/to/model_file.zip
-
-finally to run inference on a preprocessed folder run on of the following four commands based on the model you downloaded:
-
-t2 only model:
-```bash
-nnUNetv2_predict -d 086 -i INPUT_FOLDER -o OUTPUT_FOLDER -f  0 1 2 3 4 -tr nnUNetTrainer -c 3d_fullres -p nnUNetResEncUNetLPlans
-```
-t1 only model:
-```bash
-nnUNetv2_predict -d 076 -i INPUT_FOLDER -o OUTPUT_FOLDER -f  0 1 2 3 4 -tr nnUNetTrainer -c 3d_fullres -p nnUNetResEncUNetLPlans
-```
-t1 + t2:
-```bash
-nnUNetv2_predict -d 096 -i INPUT_FOLDER -o OUTPUT_FOLDER -f  0 1 2 3 4 -tr nnUNetTrainerCLDLoss -c 3d_fullres -p nnUNetResEncUNetMPlans
-```
-
-### Docker usage
-
-For usage of the docker containers provided [here](https://hub.docker.com/repository/docker/asaagilmore/anatomical_vessel_seg/tags),
-simply clone the tagged docker image for the model you want (t1,t2,t1t2), and then
-run it with your directory bound as follows. Note each container will only work with
-one of the models (76,86,96), so make sure to get the right container.
+Build the image:
 
 ```bash
-docker run -it --gpus=1 -v /path/to/data:/data asaagilmore/anatomical_vessel_seg:t1t2 ...INFERENCE_COMMAND_FROM_ABOVE
+# For x86_64 / GPU systems:
+docker build -f docker/dockerfile -t anat2vessels:latest .
+
+# For Apple Silicon (M-series, ARM64, CPU-only):
+docker build -f docker/dockerfile.arm64 -t anat2vessels:arm64 .
 ```
-Note that this requires the NVIDIA container toolkit to be installed on your machine
-for GPU support.
 
-## Step 3: Feature extraction
+Run the full pipeline (preprocess + inference + feature extraction) in one command:
 
-We provide the script used in our paper to extract anatomical features from the model predictions.
-This script will extract the features from the model predictions and save them to a .csv file.
-
-Feature extraction can be easily performed using the csv_from_predictions.py script.
-
-To do simply run the following command:
 ```bash
-python csv_from_predictions.py --input_dir /path/to/predictions --output_path path/to/save/features.csv
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
+  -v /path/to/bids:/data/bids \
+  -v /path/to/results:/data/results \
+  anat2vessels:latest all \
+  --bids_dir /data/bids \
+  --output_dir /data/results \
+  --model t1t2 \
+  --skull_strip
 ```
 
-If ray is installed it will run in parallel using all available cores,
-to disable this use the --no_ray flag.
+Or run individual steps:
+
+```bash
+# Step 1: Preprocess
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
+  -v /path/to/bids:/data/bids -v /path/to/results:/data/results \
+  anat2vessels:latest preprocess \
+  --bids_dir /data/bids --output_dir /data/results/preprocessed \
+  --model t1t2 --skull_strip
+
+# Step 2: nnUNet inference
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
+  -v /path/to/results:/data/results \
+  anat2vessels:latest predict \
+  --input_dir /data/results/preprocessed --output_dir /data/results/predictions \
+  --model t1t2
+
+# Step 3: Feature extraction
+docker run $([ "$(uname -m)" = "arm64" ] || echo "--gpus=1") \
+  -v /path/to/results:/data/results \
+  anat2vessels:latest features \
+  --input_dir /data/results/predictions --output_path /data/results/features.csv
+```
+
+| `--model` | Description |
+|-----------|-------------|
+| `t1` | T1-weighted only |
+| `t2` | T2-weighted only |
+| `t1t2` | Combined T1 + T2 (default) |
+
+Note: GPU support requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+On Apple Silicon, the ARM64 image runs natively without GPU emulation.
+Omit `--gpus` and nnUNet will automatically use the CPU.
+
+### Running on the test dataset
+
+The package includes a small test dataset downloaded from Hugging Face on
+first use. To run the full pipeline on it:
+
+```bash
+# Build (choose the image for your platform)
+docker build -f docker/dockerfile -t anat2vessels:latest .
+# or: docker build -f docker/dockerfile.arm64 -t anat2vessels:arm64 .
+
+To avoid re-downloading model weights and test data on every run,
+mount the local pooch cache into the container:
+
+```bash
+mkdir -p ~/.cache/anat2vessels
+```
+
+Add `-v ~/.cache/anat2vessels:/root/.cache/anat2vessels` to any
+`docker run` command in this section to reuse previously downloaded
+files instead of fetching them from Hugging Face each time.
+
+For example:
+
+```bash
+mkdir -p ~/.cache/anat2vessels
+docker run --rm \
+  -v ~/.cache/anat2vessels:/root/.cache/anat2vessels \
+  -v /tmp/bids:/data \
+  anat2vessels:latest fetch-test-data --output-dir /data
+```
+
+# Run the full pipeline (GPU)
+docker run --gpus=1 \
+  -v /tmp/bids:/data/bids:ro \
+  -v /tmp/results:/data/results \
+  anat2vessels:latest all \
+  --bids_dir /data/bids --output_dir /data/results \
+  --model t1t2 --skull_strip
+
+# Or run on ARM64 (Apple Silicon)
+docker run \
+  -v /tmp/bids:/data/bids:ro \
+  -v /tmp/results:/data/results \
+  anat2vessels:arm64 all \
+  --bids_dir /data/bids --output_dir /data/results \
+  --model t1t2
+```
+
+### Local installation
+
+Install the package:
+
+```bash
+pip install anat2vessels
+```
+
+Preprocess a BIDS dataset:
+
+```bash
+a2v-preprocess --bids_dir ./bids --output_dir ./preprocessed --model t1t2 --skull_strip
+```
+
+Run inference with nnUNet (requires separate nnUNet installation):
+
+```bash
+nnUNetv2_predict -d 096 -i ./preprocessed -o ./predictions -f 0 1 2 3 4 -tr nnUNetTrainerCLDLoss -c 3d_fullres -p nnUNetResEncUNetMPlans
+```
+
+Extract features:
+
+```bash
+a2v-features --input_dir ./predictions --output_path ./features.csv
+```
 
 
 ## Citation
