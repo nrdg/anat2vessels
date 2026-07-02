@@ -43,15 +43,31 @@ def _get_labeled_branches(skeleton):
     return labeled_branches, branch_names
 
 
+# def _extract_radius(segmentation, centerlines, voxel_spacing):
+#     skeleton = centerlines.astype(bool)
+#     transf = ndi.distance_transform_edt(
+#         segmentation, return_indices=False, sampling=voxel_spacing
+#     )
+#     nn = _get_num_neighbors(skeleton.astype(np.uint8))
+#     junction = (nn > 2) & skeleton
+#     sample = skeleton & ~junction
+#     radius_matrix = transf[sample]
+#     return radius_matrix[np.nonzero(radius_matrix)]
+# ============================================================================
 def _extract_radius(segmentation, centerlines, voxel_spacing):
-    image = segmentation
-    skeleton = centerlines
-    transf = ndi.distance_transform_edt(
-        image, return_indices=False, sampling=voxel_spacing
-    )
-    radius_matrix = transf * skeleton
-    radius_matrix = radius_matrix[skeleton > 0]
-    return radius_matrix
+    """Vessel radius (EDT at the centerline) sampled OFF the junctions.
+
+    Junction voxels sit inside a locally-fat merged region, so their EDT is an
+    inflated inscribed-sphere radius, not a vessel radius. Excluding them removes
+    that bias (mean/max/min radius). Optionally dilate `junction` by 1 voxel to
+    also drop the immediately-adjacent, mildly-inflated voxels."""
+    skeleton = centerlines.astype(bool)
+    transf = ndi.distance_transform_edt(segmentation, sampling=voxel_spacing)
+    nn = _get_num_neighbors(skeleton.astype(np.uint8))
+    junction = (nn > 2) & skeleton
+    sample = skeleton & ~junction                      # <-- the fix
+    radius_matrix = transf[sample]
+    return radius_matrix[np.nonzero(radius_matrix)]
 
 
 def _extract_skeleton(segmentation):
