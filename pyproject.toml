@@ -1,0 +1,104 @@
+[build-system]
+requires = ["setuptools >= 64", "wheel", "setuptools_scm[toml] >= 7"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anat2vessels"
+dynamic = ["version"]
+description = "Quantifying brain vascular morphology in anatomical MR images using deep learning"
+readme = "README.md"
+license = {text = "BSD License"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Asa Gilmore"},
+    {name = "Ariel Rokem"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "nibabel >= 5",
+    "numpy >= 1.22",
+    "scipy >= 1.10",
+    "scikit-image >= 0.19",
+    "tqdm >= 4",
+    "pandas >= 1.5",
+    "ray >= 2.6",
+    "antspyx",
+    "antspynet",
+    "pooch >= 1",
+    "pybids >= 0.17",
+]
+
+[project.optional-dependencies]
+dev = [
+    "spin == 0.13",
+    "setuptools_scm[toml] == 7",
+]
+doc = [
+    "matplotlib",
+    "numpydoc",
+    "pydata-sphinx-theme >= 0.16.1",
+    "sphinx >= 8.2.0",
+    "sphinx-autoapi >= 3.4.0",
+    "sphinx-design",
+    "sphinx-gallery",
+]
+style = [
+    "codespell",
+    "pre-commit",
+    "ruff",
+]
+test = [
+    "pytest >= 7",
+    "pytest-console-scripts >= 0",
+    "pytest-cov",
+]
+all = [
+    "anat2vessels[dev]",
+    "anat2vessels[doc]",
+    "anat2vessels[style]",
+    "anat2vessels[test]",
+]
+[project.scripts]
+a2v-preprocess = "anat2vessels.preprocess:run"
+a2v-features = "anat2vessels.vessels2csv:run"
+
+[project.urls]
+Homepage = "https://github.com/nrdg/anat2vessels"
+Documentation = "https://nrdg.github.io/anat2vessels/"
+Repository = "https://github.com/nrdg/anat2vessels"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["anat2vessels*"]
+
+[tool.setuptools_scm]
+write_to = "src/anat2vessels/version.py"
+fallback_version = "0.0"
+local_scheme = "no-local-version"
+
+[tool.pytest.ini_options]
+script_launch_mode = "subprocess"
+
+[tool.codespell]
+ignore-words-list = "astroid"
+
+[tool.spin]
+package = "anat2vessels"
+
+[tool.spin.commands]
+"Setup" = [".spin/cmds.py:setup"]
+"Build" = ["spin.cmds.pip.install"]
+"Test" = [".spin/cmds.py:test", ".spin/cmds.py:lint"]
+"Docs" = [".spin/cmds.py:docs"]
+"Clean" = [".spin/cmds.py:clean"]
