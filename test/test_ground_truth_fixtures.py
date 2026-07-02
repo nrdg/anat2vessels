@@ -1,12 +1,3 @@
-"""
-Check anat2vessels.features.extract_features against the known-answer NIfTI
-fixtures in test/niftis, going through anat2vessels.vessels2csv.out_list_to_df
-the same way the production pipeline does. That function still applies real
-logic on top of the raw extract_features() arrays (connected-component
-counting of bifurcations/endpoints, radius stats, branch-length stats), so
-routing through it -- rather than reading extract_features()'s output
-directly -- is what's actually exercised in production.
-"""
 import os
 
 import pytest
@@ -25,7 +16,6 @@ def _extract_and_count(path):
     return df.iloc[0]
 
 
-# (fixture filename, ground-truth value, how to read the feature, tolerance)
 CASES = [
     ("bifurcation_overcount_1.nii.gz", 1, lambda o: int(o["bifurcations"]), 0),
     ("bifurcation_overcount_2.nii.gz", 1, lambda o: int(o["bifurcations"]), 0),
