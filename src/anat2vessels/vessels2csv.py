@@ -80,10 +80,16 @@ def out_list_to_df(out_list):
             out["num_branches"] = item["num_branches"]
             out["total_volume"] = item["total_volume"]
 
-            _, n_bifurcations = ndi.label(item['bifurcations'], structure=np.ones((3, 3, 3)))
+            bifurcations = np.asarray(item['bifurcations'])
+            _, n_bifurcations = ndi.label(
+                bifurcations, structure=np.ones((3,) * bifurcations.ndim)
+            )
             out['bifurcations'] = float(n_bifurcations)
 
-            _, n_endpoints = ndi.label(item['endpoints'], structure=np.ones((3,3,3)))
+            endpoints = np.asarray(item['endpoints'])
+            _, n_endpoints = ndi.label(
+                endpoints, structure=np.ones((3,) * endpoints.ndim)
+            )
             out['endpoints'] = float(n_endpoints)
 
             out["radius_list"] = item["radius_list"]
