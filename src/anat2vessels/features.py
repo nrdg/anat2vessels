@@ -44,14 +44,16 @@ def _get_labeled_branches(skeleton):
 
 
 def _extract_radius(segmentation, centerlines, voxel_spacing):
-    image = segmentation
-    skeleton = centerlines
-    transf = ndi.distance_transform_edt(
-        image, return_indices=False, sampling=voxel_spacing
-    )
-    radius_matrix = transf * skeleton
-    radius_matrix = radius_matrix[skeleton > 0]
-    return radius_matrix
+    skeleton = centerlines.astype(bool)
+    transf = ndi.distance_transform_edt(segmentation, sampling=voxel_spacing)
+    nn = _get_num_neighbors(skeleton.astype(np.uint8))
+    junction = (nn > 2) & skeleton
+    # We want to avoid making mis-estimates of radius around 
+    # junctions. This could happen because we are doing a 
+    # distance transform.  So we dis-regard these points:
+    sample = skeleton & ~junction                      
+    radius_matrix = transf[sample]
+    return radius_matrix[np.nonzero(radius_matrix)]
 
 
 def _extract_skeleton(segmentation):

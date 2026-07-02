@@ -6,6 +6,7 @@ import numpy as np
 import ray
 from tqdm import tqdm
 from multiprocessing import cpu_count
+from scipy import ndimage as ndi
 
 
 def main(args):
@@ -78,8 +79,19 @@ def out_list_to_df(out_list):
             out["sub_id"] = item["sub_id"]
             out["num_branches"] = item["num_branches"]
             out["total_volume"] = item["total_volume"]
-            out["bifurcations"] = float(item["bifurcations"].sum())
-            out["endpoints"] = float(item["endpoints"].sum())
+
+            bifurcations = np.asarray(item['bifurcations'])
+            _, n_bifurcations = ndi.label(
+                bifurcations, structure=np.ones((3,) * bifurcations.ndim)
+            )
+            out['bifurcations'] = float(n_bifurcations)
+
+            endpoints = np.asarray(item['endpoints'])
+            _, n_endpoints = ndi.label(
+                endpoints, structure=np.ones((3,) * endpoints.ndim)
+            )
+            out['endpoints'] = float(n_endpoints)
+
             out["radius_list"] = item["radius_list"]
 
             # Handle potential empty radius list
