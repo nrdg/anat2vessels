@@ -48,7 +48,10 @@ def _extract_radius(segmentation, centerlines, voxel_spacing):
     transf = ndi.distance_transform_edt(segmentation, sampling=voxel_spacing)
     nn = _get_num_neighbors(skeleton.astype(np.uint8))
     junction = (nn > 2) & skeleton
-    sample = skeleton & ~junction                      # <-- the fix
+    # We want to avoid making mis-estimates of radius around 
+    # junctions. This could happen because we are doing a 
+    # distance transform.  So we dis-regard these points:
+    sample = skeleton & ~junction                      
     radius_matrix = transf[sample]
     return radius_matrix[np.nonzero(radius_matrix)]
 
